@@ -88,7 +88,7 @@ input[type=range]{width:100%;accent-color:var(--ink)}
     </div>
     <div class="hint">ลากกล่อง = หมุนหัว · ลากฝา = ดึงฝา · ปุ่มแถวล่าง = เมนู</div>
     <div class="toast" id="toast" hidden></div>
-    <div class="stamp" id="stamp">อัปเดต 30/09 17:10</div>
+    <div class="stamp" id="stamp">อัปเดต 30/09 17:58</div>
   </div>
   <aside>
     <div><h1>Maker บนภาพจริง</h1><p class="sub">ตัว โต๊ะ แก้ว และลายบนกล่องกับฝา มาจาก Master Final ของ Aoh กล่องกับฝาเป็นสามมิติจริงที่แปะหน้ากล่องซึ่งคลี่ออกมาจากภาพ แท็บบนกล่องเอาออกแล้ว เมนูอยู่แถวล่างแทน ก้อนข้างในกับของที่ยื่นยังเป็นของชั่วคราว พฤติกรรมทั้งหมดเหมือน Behavior v2</p></div>
@@ -255,16 +255,25 @@ const VIEW = { x0: -1, x1: 1, y0: -1, y1: 1 };                   // visible part
 // the real art on the head: faces flattened from Aoh's box-only image (tools/unwarp_box.py)
 const texL = new THREE.TextureLoader(), T = n => { const t = texL.load('art/tex/' + n + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return new THREE.MeshBasicMaterial({ map: t, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }); };
 const RIM = new THREE.MeshBasicMaterial({ color: 0xEDEDEA, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+const NONE = new THREE.MeshBasicMaterial({ visible: false });
+// the walls overlap at the corners, so a wall's end face lies in the same plane as its neighbour's outside face;
+// two faces in one plane fight over every pixel and flicker as the head moves (Aoh 2026-09-30), so plain faces on the outside are not drawn
+function hideOuter(o, m) { const p = o.position, g = o.geometry.parameters, e = 1e-4;
+  const at = [p.x + g.width / 2, p.x - g.width / 2, p.y + g.height / 2, p.y - g.height / 2, p.z + g.depth / 2, p.z - g.depth / 2];
+  for (let k = 0; k < 6; k++) if (m[k] === RIM && (k < 2 ? Math.abs(Math.abs(at[k]) - W / 2) < e : k > 3 ? Math.abs(Math.abs(at[k]) - D / 2) < e : k === 3 && Math.abs(at[k]) < e)) m[k] = NONE; }
 { const F = { front: T('box_front'), back: T('box_back'), left: T('box_left'), right: T('box_right'), inF: T('box_in_front'), inB: T('box_in_back'), inL: T('box_in_left'), inR: T('box_in_right'), floor: T('box_in_floor') };
   head.children.forEach(o => { if (!o.isMesh) return;
     if (o.userData.part !== 'box') { o.visible = false; return; }                     // stand-in slots, label and dark inner box
     const p = o.position, m = [RIM, RIM, RIM, RIM, RIM, RIM];                         // BoxGeometry faces: +x, -x, +y, -y, +z, -z
     if (p.y < TH) m[2] = F.floor; else if (p.z > D / 2 - TH) { m[4] = F.front; m[5] = F.inF; } else if (p.z < -D / 2 + TH) { m[5] = F.back; m[4] = F.inB; }
     else if (p.x < 0) { m[1] = F.left; m[0] = F.inL; } else { m[0] = F.right; m[1] = F.inR; }
-    o.material = m; o.children.forEach(c => c.visible = false); }); }
+    hideOuter(o, m); o.material = m; o.children.forEach(c => c.visible = false); }); }
 { const L = { top: T('lid_top'), front: T('lid_front'), back: T('lid_back'), left: T('lid_left'), right: T('lid_right') }, LW = W + .04, LD = D + .04;
+  let solidTop = false;
   lid.children.forEach(o => { if (!o.isMesh) return; const p = o.position, g = o.geometry.parameters, m = [RIM, RIM, RIM, RIM, RIM, RIM];
-    if (g.height < .05) {                                                             // the two top halves share one picture of the lid top
+    if (g.height < .05) {                                                             // no tabs on the art page, so the lid top is one solid sheet: no slit, no seam (Aoh 2026-09-30)
+      if (solidTop) { o.visible = false; return; } solidTop = true;
+      o.geometry = new THREE.BoxGeometry(LW, g.height, LD); p.z = 0;
       const uv = o.geometry.attributes.uv, pos = o.geometry.attributes.position;
       for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + p.x + LW / 2) / LW, 1 - (pos.getZ(i) + p.z + LD / 2) / LD);
       uv.needsUpdate = true; m[2] = L.top; }
@@ -547,12 +556,12 @@ function step(dt) {
   // ---- lid: floats on a spring above the head, lags, wobbles, can be pulled away
   const wantLift = P.lidMode === 'float' ? 1 : P.lidMode === 'closed' ? 0 : (hover || drag || HS.dist > .15 || time - pointerSeen < 1.2) ? 1 : 0;
   lidS.lift = damp(lidS.lift, wantLift, wantLift ? 3.5 : 2, dt);
-  const home = head.localToWorld(V(0, H + .012 + LIFT * lidS.lift + Math.sin(time * 2.1) * .012 * lidS.lift, 0));
+  const home = head.localToWorld(V(0, H + .03 + LIFT * lidS.lift + Math.sin(time * 2.1) * .012 * lidS.lift, 0));
   const target = home.clone().add(lidS.pull);
   if (!lidS.held) lidS.pull.multiplyScalar(Math.exp(-4 * dt));
   // the crowd holds an open lid up from inside: pushing it down meets their resistance until they give up and duck;
   // even then it only closes down to the rim, never into the box
-  const RIM_Y = H + .012, guard = lidS.squeezed ? 0 : .2 * Math.min(1, lidS.lift * 1.5);
+  const RIM_Y = H + .03, guard = lidS.squeezed ? 0 : .2 * Math.min(1, lidS.lift * 1.5);
   { const tl = head.worldToLocal(target.clone()), over = RIM_Y + guard - tl.y;
     if (over > 0 && Math.abs(tl.x) < W && Math.abs(tl.z) < D) {
       if (lidS.held && over > .12 && !lidS.squeezed) { lidS.pushT += dt; if (lidS.pushT > .35) { lidS.squeezed = time; squeezeCrowd(); } }
@@ -566,7 +575,7 @@ function step(dt) {
   lidS.vel.addScaledVector(target.clone().sub(lidS.pos), k * dt).multiplyScalar(Math.exp(-c * dt)); lidS.pos.addScaledVector(lidS.vel, dt);
   { const hl = head.worldToLocal(lidS.pos.clone());                                         // the rim is solid
     lidS.seat = Math.abs(hl.x) < W && Math.abs(hl.z) < D ? clamp((RIM_Y + LIDH - hl.y) / LIDH, 0, 1) : 0;   // 1 = sitting on the rim
-    if (lidS.seat > 0) { hl.x *= 1 - lidS.seat * .5; hl.z *= 1 - lidS.seat * .5; }
+    if (lidS.seat > 0) { const c = 1 - Math.min(1, lidS.seat * 2.5); hl.x *= c; hl.z *= c; }   // once the skirt reaches the walls it is centred on them
     if (hl.y < RIM_Y && Math.abs(hl.x) < W && Math.abs(hl.z) < D) { hl.y = RIM_Y; if (lidS.vel.length() > .6) sfx.clack(Math.min(1, lidS.vel.length() / 3)); lidS.vel.multiplyScalar(.3); }
     lidS.pos.copy(head.localToWorld(hl)); }
   { const p = lidS.pos.clone().project(camera), m = .16;                                  // the lid never leaves the screen
@@ -576,7 +585,7 @@ function step(dt) {
   // wobble driven by the head's angular acceleration
   lidS.wobV.x += (-accV.y * .004 - lidS.wob.x * 60) * dt; lidS.wobV.z += (accV.x * .004 + accV.z * .003 - lidS.wob.z * 60) * dt; lidS.wobV.multiplyScalar(Math.exp(-(lidS.lift < .05 ? 9 : 3.2) * dt));
   lidS.wob.addScaledVector(lidS.wobV, dt); lidS.wob.clampScalar(-.5, .5);
-  lid.position.copy(lidS.pos); lid.scale.setScalar(P.headScale); lid.quaternion.copy(hq); lid.rotateX((lidS.wob.x + lidS.pull.z * .6) * (1 - .75 * lidS.seat)); lid.rotateZ((lidS.wob.z - lidS.pull.x * .6) * (1 - .75 * lidS.seat));   // a seated lid sits nearly flat, still rattles a little
+  lid.position.copy(lidS.pos); lid.scale.setScalar(P.headScale); lid.quaternion.copy(hq); const flat = 1 - .94 * Math.min(1, lidS.seat * 2.5); lid.rotateX((lidS.wob.x + lidS.pull.z * .6) * flat); lid.rotateZ((lidS.wob.z - lidS.pull.x * .6) * flat);   // a lid coming down levels out as soon as its skirt meets the walls, then only rattles a little
   const lidLag = lidS.pos.distanceTo(home);
   if (lidLag < .06 && lidS.wob.length() < .06) { if (!lidS.settledAt) lidS.settledAt = time; } else lidS.settledAt = 0;
 
