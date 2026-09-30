@@ -1,0 +1,838 @@
+<meta charset="utf-8">
+<title>Maker on Art</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Thai:wght@400;500;700&display=swap">
+<style>
+[hidden]{display:none!important}
+/* one deliberate look: a grey drafting table, same in every theme */
+:root{--table:#DCDFE4;--stage:#E9EBEE;--panel:#F6F6F8;--ink:#1D1826;--muted:#5F5A69;--line:#C9C7D1;--accent:#D8106F;--dizzy:#2F6BD8;
+  --body:"IBM Plex Sans Thai","Noto Sans Thai",Tahoma,system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;color-scheme:light}
+html,body{height:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--table);color:var(--ink);font:14px/1.5 var(--body)}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 340px;height:100%}
+.stage{position:relative;display:grid;place-items:center;background:var(--table);overflow:hidden;min-height:0}
+.stage{background:#FCFCFA!important}
+.frame{position:absolute;inset:0}
+#ref{position:absolute;display:block;opacity:.5;pointer-events:none}
+#cv{position:absolute;inset:0;display:block;touch-action:none;cursor:grab}
+.menu{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);display:flex;gap:6px;z-index:2}
+.menu button{font:600 12px/1 var(--mono);letter-spacing:.08em;background:#FCFCFA;color:var(--ink);border:1.5px solid var(--ink);padding:10px 12px;cursor:pointer}
+.menu button:hover{background:var(--ink);color:#FCFCFA}
+#cv.grabbing{cursor:grabbing}
+.hud{position:absolute;left:16px;top:14px;display:grid;gap:6px;pointer-events:none;max-width:min(52ch,70%)}
+.hud .ev{font:600 13px/1.25 var(--mono);letter-spacing:.04em}
+.hud .why{font-size:13px;color:var(--muted)}
+.meter{display:flex;flex-wrap:wrap;gap:6px 10px;font:11px/1 var(--mono);color:var(--muted);align-items:center}
+.bar{width:80px;height:6px;background:var(--line);position:relative;display:inline-block}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--ink);width:0}
+.bar.d i{background:var(--accent)}
+.bar.z i{background:var(--dizzy)}
+.toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 14px;font:600 13px/1 var(--body);pointer-events:none}
+.stamp{position:absolute;right:16px;bottom:10px;font:11px/1 var(--mono);color:var(--muted);pointer-events:none;z-index:3}
+.hint{position:absolute;right:16px;top:14px;font-size:12.5px;color:var(--muted);max-width:30ch;text-align:right;pointer-events:none}
+aside{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding-inline:18px;padding-block:18px 40px;display:grid;gap:22px;align-content:start}
+h1{font:700 18px/1.3 var(--body);margin:0}
+.sub{margin:4px 0 0;color:var(--muted);font-size:13px}
+fieldset{border:0;margin:0;padding:0;display:grid;gap:10px}
+legend{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:0;margin-bottom:10px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:500 13px/1 var(--body);background:transparent;color:var(--ink);border:1.5px solid var(--line);padding:8px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:112px 1fr 44px;gap:8px;align-items:center}
+.row label{font-size:13px}
+.row output{font:12px var(--mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--ink)}
+.tries{margin:0;padding-left:18px;display:grid;gap:6px;font-size:13px}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.act{font:600 13px/1 var(--body);background:transparent;border:1.5px solid var(--ink);color:var(--ink);padding:9px 12px;cursor:pointer;width:max-content}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.moods{display:grid;gap:7px}
+.mrow{display:grid;grid-template-columns:86px 1fr;gap:3px 8px;align-items:center;font-size:12.5px}
+.mrow .bars{display:flex;gap:8px;align-items:center}
+.mrow .bars .bar{width:auto;flex:1}
+.mrow .doing{grid-column:2;font:11px/1.2 var(--mono);color:var(--muted)}
+.key{display:flex;gap:14px;font:11px/1 var(--mono);color:var(--muted);align-items:center}
+.key span::before{content:"";display:inline-block;width:10px;height:6px;margin-right:5px;background:var(--c)}
+.mem{margin:0;padding:0;list-style:none;display:grid;gap:5px;font:11.5px/1.35 var(--mono);color:var(--ink)}
+.mem li{display:grid;grid-template-columns:44px 1fr;gap:6px}
+.mem time{color:var(--muted);font-variant-numeric:tabular-nums}
+.mem .w{color:var(--muted)}
+.mem .empty{color:var(--muted);display:block}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;grid-template-rows:64vh auto;height:auto}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  .hint{display:none}
+  .hud{left:10px;top:8px;max-width:88%}
+}
+</style>
+
+<div class="app">
+  <div class="stage" id="stage">
+    <div class="frame" id="frame">
+      <img id="ref" src="art/ref_composition_v3.png" alt="" hidden>
+      <canvas id="cv" aria-label="Maker นั่งเขียนงาน หัวเป็นกล่องเอกสาร ลากเพื่อหมุนหัว ลากฝาได้"></canvas>
+    </div>
+    <nav class="menu" id="menu" aria-label="เมนู"><button type="button" data-i="0">WORK</button><button type="button" data-i="1">WORLDS</button><button type="button" data-i="2">EDITIONS</button><button type="button" data-i="3">CONTACT</button></nav>
+    <div class="hud">
+      <div class="ev" id="ev">WORKING</div>
+      <div class="why" id="why">Maker กำลังเขียน ลองลากที่ตัวกล่อง</div>
+      <div class="meter"><span>ความเร็ว</span><span class="bar"><i id="mSpeed"></i></span><span>Maker มึน</span><span class="bar z"><i id="mDz"></i></span><span>หงุดหงิด</span><span class="bar d"><i id="mAn"></i></span></div>
+    </div>
+    <div class="hint">ลากกล่อง = หมุนหัว · ลากฝา = ดึงฝา · ปุ่มแถวล่าง = เมนู</div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="stamp" id="stamp">อัปเดต 30/09 15:40</div>
+  </div>
+  <aside>
+    <div><h1>Maker บนภาพจริง</h1><p class="sub">ตัว โต๊ะ แก้ว และลายบนกล่องกับฝา มาจาก Master Final ของ Aoh กล่องกับฝาเป็นสามมิติจริงที่แปะหน้ากล่องซึ่งคลี่ออกมาจากภาพ แท็บบนกล่องเอาออกแล้ว เมนูอยู่แถวล่างแทน ก้อนข้างในกับของที่ยื่นยังเป็นของชั่วคราว พฤติกรรมทั้งหมดเหมือน Behavior v2</p></div>
+
+    <fieldset><legend>ลองทำ</legend>
+      <ol class="tries">
+        <li>ลากแถบ "ขนาดกล่อง" ด้านล่าง เลือกขนาดหัวที่ชอบ แล้วบอกตัวเลขมา</li>
+        <li>ตั้งขนาดกล่องเป็น 1.00 แล้วกด "ทับภาพมาสเตอร์" ดูว่ากล่องสามมิติทับกล่องที่วาดไว้พอดีไหม</li>
+        <li>ลากหัวหมุนช้า ๆ ดูด้านข้าง ด้านหลัง และด้านในกล่อง ว่าลายที่คลี่มาดูเนียนไหม</li>
+        <li>นั่งดูเฉย ๆ: กล่องโยกเบา ๆ ตามจังหวะเขียน มือขวาเขียนเป็นช่วง ๆ มือซ้ายเคาะนิ้วบ้าง เท้ากระดิกเป็นพัก ๆ</li>
+        <li>ดึงฝาไปไกล ๆ ฝาจะไม่หลุดออกนอกจอ</li>
+        <li>เอาเมาส์ชี้ปุ่มเมนู WORLDS / EDITIONS / CONTACT แถวล่าง ดูตัวข้างในแย่งกันยื่นของ แล้วกดของหรือปุ่ม</li>
+        <li>กดปุ่ม WORK หรือสะบัดแรง ดึงฝา เหมือนใน Behavior v2 (ตอนยื่นงานยังไม่มีแขนจริงมาจับแผ่น)</li>
+      </ol>
+    </fieldset>
+
+    <fieldset><legend>ขนาดหัว</legend>
+      <div class="row"><label for="headScale">ขนาดกล่อง</label><input id="headScale" type="range" min="0.9" max="1.6" step="0.01" value="1.22"><output for="headScale"></output></div>
+      <p class="note">1.00 = เท่ากล่องในภาพมาสเตอร์ ก้นกล่องยังวางบนคอเสื้อที่เดิม</p>
+    </fieldset>
+
+    <fieldset><legend>ภาพเทียบ</legend><div class="seg" id="view"></div></fieldset>
+
+    <fieldset><legend>อารมณ์ตอนนี้</legend>
+      <div class="key"><span style="--c:var(--dizzy)">มึน (ขึ้นเร็ว ลงเร็ว)</span><span style="--c:var(--accent)">หงุดหงิด (ลงช้า)</span></div>
+      <div class="moods" id="moods"></div>
+    </fieldset>
+
+    <fieldset><legend>ความจำ (ใหม่สุดอยู่บน)</legend>
+      <ul class="mem" id="mem"></ul>
+      <p class="note">เก็บเป็นเหตุการณ์: ใคร เจออะไร ขณะกำลังทำอะไร หงุดหงิดขึ้นเฉพาะตอนถูกกวนขณะมีงานทำ และถูกกวนซ้ำในช่วงสั้นจะขึ้นแรงกว่า</p>
+    </fieldset>
+
+    <fieldset><legend>หลังปล่อยหัว</legend><div class="seg" id="recenter"></div></fieldset>
+    <fieldset><legend>ฝา</legend><div class="seg" id="lidMode"></div></fieldset>
+    
+    <fieldset><legend>ปรับความรู้สึก</legend>
+      <div class="row"><label for="kHead">หัวไหลต่อ</label><input id="kHead" type="range" min="0.6" max="6" step="0.1" value="2.2"><output for="kHead"></output></div>
+      <div class="row"><label for="kLid">ฝาตามทัน</label><input id="kLid" type="range" min="8" max="120" step="1" value="38"><output for="kLid"></output></div>
+      <div class="row"><label for="kIn">ข้างในหลวม</label><input id="kIn" type="range" min="8" max="80" step="1" value="26"><output for="kIn"></output></div>
+      <div class="row"><label for="kStart">ตกใจง่าย</label><input id="kStart" type="range" min="0.1" max="0.9" step="0.01" value="0.4"><output for="kStart"></output></div>
+      <div class="row"><label for="kIdle">รอจัดหัว (วิ)</label><input id="kIdle" type="range" min="3" max="30" step="1" value="9"><output for="kIdle"></output></div>
+      <div class="row"><label for="kDz">มึนหาย /วิ</label><input id="kDz" type="range" min="0.2" max="2" step="0.05" value="0.6"><output for="kDz"></output></div>
+      <div class="row"><label for="kAn">หงุดหงิดหาย /วิ</label><input id="kAn" type="range" min="0.005" max="0.1" step="0.005" value="0.025"><output for="kAn"></output></div>
+      <p class="note">ค่าบนแถบคือจุดตั้งต้น ถ้าเจอค่าที่ชอบ แคปหน้าจอส่งมาได้เลย</p>
+      <div class="acts"><button type="button" class="act" id="reset">รีเซ็ตท่า</button><button type="button" class="act" id="forget">ล้างความจำ</button></div>
+    </fieldset>
+
+    <fieldset><legend>เสียง</legend><div class="seg" id="snd"></div></fieldset>
+  </aside>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+
+const $ = id => document.getElementById(id);
+const P = { kHead: 2.2, kLid: 38, kIn: 26, kStart: .4, kIdle: 9, kDz: .6, kAn: .025, lidMode: 'auto', cam: 'faceR', sound: true, recenter: 'snap' };
+const W = 1, H = .52, D = .96, TH = .025, LIDH = .17, REST_PITCH = .38, LIFT = .46;
+const INK = 0x1D1826;
+const lerp = THREE.MathUtils.lerp, clamp = THREE.MathUtils.clamp, V = (x, y, z) => new THREE.Vector3(x, y, z);
+const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
+const smooth = u => u * u * (3 - 2 * u);
+
+// ---------------------------------------------------------------- sound (synthesised, starts on first touch)
+const A = { ctx: null, out: null, noise: null };
+function audioStart() {
+  if (A.ctx) { A.ctx.resume(); return; }
+  const c = A.ctx = new (window.AudioContext || window.webkitAudioContext)(); A.out = c.createGain(); A.out.gain.value = P.sound ? .6 : 0; A.out.connect(c.destination);
+  const b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; A.noise = b;
+  // pencil: a continuous scratch whose level we drive
+  const s = c.createBufferSource(); s.buffer = b; s.loop = true; const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 1.4;
+  A.pencil = c.createGain(); A.pencil.gain.value = 0; s.connect(bp); bp.connect(A.pencil); A.pencil.connect(A.out); s.start();
+}
+function burst(freq, q, dur, gain, type = 'bandpass') {
+  if (!A.ctx) return; const c = A.ctx, t = c.currentTime, s = c.createBufferSource(); s.buffer = A.noise;
+  const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; const g = c.createGain();
+  g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); s.connect(f); f.connect(g); g.connect(A.out); s.start(t, Math.random() * .5, dur + .05);
+}
+const sfx = {
+  clack: (v = 1) => burst(1800, 3, .07, .5 * v),
+  rustle: () => { for (let i = 0; i < 4; i++) setTimeout(() => burst(5200 + Math.random() * 2000, .8, .06, .12), i * 45); },
+  thud: v => burst(260, 2, .12, .5 * v, 'lowpass'),
+  mutter(v = 1) { if (!A.ctx) return; const c = A.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(140 + Math.random() * 40, t); for (let i = 0; i < 5; i++) o.frequency.setValueAtTime(120 + Math.random() * 90, t + i * .07);
+    f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 3; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.16 * v, t + .03); g.gain.linearRampToValueAtTime(0, t + .38);
+    o.connect(f); f.connect(g); g.connect(A.out); o.start(t); o.stop(t + .4); },
+  pip() { if (!A.ctx) return; const c = A.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(900, t); o.frequency.exponentialRampToValueAtTime(1700, t + .08);
+    g.gain.setValueAtTime(.18, t); g.gain.exponentialRampToValueAtTime(.001, t + .14); o.connect(g); g.connect(A.out); o.start(t); o.stop(t + .15); },
+};
+
+// ---------------------------------------------------------------- renderer + scene
+const cv = $('cv'), stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(Math.max(devicePixelRatio * 1.5, 2), 3)); renderer.setClearColor(0x000000, 0);   // supersampled so moving ink lines don't shimmer
+// camera solved from the box corners in the Master Final (art/camera_v3.json): camera at the origin looking down -z
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(24.93, 2000 / 1125, .5, 60);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xB9BCC4, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(2.5, 5, 3.5); scene.add(sun);
+const mat = c => new THREE.MeshLambertMaterial({ color: c });
+const M = { card: mat(0xECE7DC), lid: mat(0xF4F0E6), body: mat(0x2A2531), slot: new THREE.MeshBasicMaterial({ color: 0x0E0B12 }), eye: mat(0xffffff),
+  pupil: new THREE.MeshBasicMaterial({ color: INK }), pencil: mat(0xE3B23C), c0: mat(0x2F2838), c1: mat(0x8C8795), c2: mat(0xD24A86) };
+const edgeMat = new THREE.LineBasicMaterial({ color: INK });
+const outlined = (g, m, em = edgeMat) => { const o = new THREE.Mesh(g, m); o.add(new THREE.LineSegments(new THREE.EdgesGeometry(g, 20), em)); return o; };
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), mat(0xE2E4E8)); floor.rotation.x = -Math.PI / 2; floor.position.y = -.002; floor.visible = false; scene.add(floor);
+
+// paper with the Maker's writing
+const PAPER = { cx: .03, cz: .74, w: 1.12, d: .78 };
+const paperCv = document.createElement('canvas'); paperCv.width = 1024; paperCv.height = 714; const pctx = paperCv.getContext('2d');
+const paperTex = new THREE.CanvasTexture(paperCv); paperTex.colorSpace = THREE.SRGBColorSpace;
+const paper = new THREE.Mesh(new THREE.PlaneGeometry(PAPER.w, PAPER.d), new THREE.MeshLambertMaterial({ map: paperTex })); paper.rotation.x = -Math.PI / 2; paper.position.set(PAPER.cx, .003, PAPER.cz); paper.visible = false; scene.add(paper);
+pctx.fillStyle = '#FBFAF6'; pctx.fillRect(0, 0, 1024, 714); pctx.strokeStyle = 'rgba(29,24,38,.08)'; for (let i = 1; i < 14; i++) { pctx.beginPath(); pctx.moveTo(0, i * 51); pctx.lineTo(1024, i * 51); pctx.stroke(); }
+const toPaper = v => [(v.x - (PAPER.cx - PAPER.w / 2)) / PAPER.w * 1024, (v.z - (PAPER.cz - PAPER.d / 2)) / PAPER.d * 714];
+let lastInk = null;
+
+// ---------------------------------------------------------------- limbs
+const UP = V(0, 1, 0), cylGeo = new THREE.CylinderGeometry(1, 1, 1, 14), sphGeo = new THREE.SphereGeometry(1, 18, 12), boxGeo = new THREE.BoxGeometry(1, 1, 1);
+function limb(r, m, parent = scene) { const g = new THREE.Group(), c = new THREE.Mesh(cylGeo, m), a = new THREE.Mesh(sphGeo, m), b = new THREE.Mesh(sphGeo, m); g.add(c, a, b); parent.add(g);
+  return { g, set(p, q, rr = r) { const d = q.clone().sub(p), L = d.length(); c.position.copy(p).addScaledVector(d, .5); c.scale.set(rr, Math.max(L, 1e-4), rr); c.quaternion.setFromUnitVectors(UP, d.normalize()); a.position.copy(p); b.position.copy(q); a.scale.setScalar(rr); b.scale.setScalar(rr); } }; }
+function ik(s, h, l1, l2, pole) { const d = h.clone().sub(s), L = Math.min(d.length(), l1 + l2 - 1e-3), dir = d.clone().normalize(), a = (l1 * l1 - l2 * l2 + L * L) / (2 * L), hh = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  const side = pole.clone().sub(s); side.addScaledVector(dir, -side.dot(dir)).normalize(); return s.clone().addScaledVector(dir, a).addScaledVector(side, hh); }
+const body = {}; for (const k of ['torso', 'legL1', 'legL2', 'legR1', 'legR2', 'footL', 'footR', 'armL1', 'armL2', 'armR1', 'armR2', 'handL', 'handR']) body[k] = limb(k === 'torso' ? .16 : k.startsWith('leg') ? .072 : k.startsWith('foot') ? .06 : k.startsWith('hand') ? .06 : .048, M.body);
+const pencil = limb(.012, M.pencil);
+for (const b of Object.values(body)) b.g.visible = false; pencil.g.visible = false;   // the drawn body in the plate replaces the stand-in limbs
+
+// ---------------------------------------------------------------- head: the archive
+// rig = the box's resting pose in the picture; the head turns (and grows) inside it around the neck hole
+const rig = new THREE.Group(); rig.rotation.set(0.5028, 0.771, 0.1303, 'YXZ'); rig.position.set(-0.6461, 0.3396, -7.9306); scene.add(rig); rig.updateMatrixWorld(true);
+const head = new THREE.Group(); head.rotation.order = 'YXZ'; rig.add(head);
+const hq = new THREE.Quaternion(), BOB = { p: 0, y: 0, r: 0 };   // BOB: the calm writing nod, drawn on top of the physics
+const pick = [];
+function tag(o, part, extra = {}) { o.userData = { part, ...extra }; pick.push(o); return o; }
+{
+  const wall = (w, h, d, x, y, z) => { const o = outlined(new THREE.BoxGeometry(w, h, d), M.card); o.position.set(x, y, z); head.add(o); tag(o, 'box'); };
+  wall(W, TH, D, 0, TH / 2, 0); wall(W, H, TH, 0, H / 2, D / 2 - TH / 2); wall(W, H, TH, 0, H / 2, -D / 2 + TH / 2); wall(TH, H, D, W / 2 - TH / 2, H / 2, 0); wall(TH, H, D, -W / 2 + TH / 2, H / 2, 0);
+  const inner = new THREE.Mesh(new THREE.BoxGeometry(W - 2 * TH - .002, H - TH, D - 2 * TH - .002), new THREE.MeshLambertMaterial({ color: 0x4B4552, side: THREE.BackSide })); inner.position.y = TH + (H - TH) / 2 + .001; head.add(inner);
+  const s = new THREE.Shape(), w = .3, h = .095, r = h / 2; s.moveTo(-w / 2 + r, -h / 2); s.lineTo(w / 2 - r, -h / 2); s.absarc(w / 2 - r, 0, r, -Math.PI / 2, Math.PI / 2); s.lineTo(-w / 2 + r, h / 2); s.absarc(-w / 2 + r, 0, r, Math.PI / 2, Math.PI * 1.5);
+  for (const sg of [1, -1]) { const m = new THREE.Mesh(new THREE.ShapeGeometry(s, 12), M.slot); m.position.set(sg * (W / 2 + .002), H * .56, 0); m.rotation.y = sg * Math.PI / 2; head.add(m); }
+  const c = document.createElement('canvas'); c.width = 512; c.height = 200; const x = c.getContext('2d'); x.fillStyle = '#FBF8F1'; x.fillRect(0, 0, 512, 200); x.strokeStyle = '#1D1826'; x.lineWidth = 8; x.strokeRect(4, 4, 504, 192);
+  x.fillStyle = '#1D1826'; x.font = '700 64px "IBM Plex Mono",monospace'; x.textAlign = 'center'; x.fillText('BY THANEST', 256, 120);
+  const lt = new THREE.CanvasTexture(c); lt.colorSpace = THREE.SRGBColorSpace; const lab = new THREE.Mesh(new THREE.PlaneGeometry(.42, .164), new THREE.MeshLambertMaterial({ map: lt })); lab.position.set(0, H * .45, D / 2 + .003); head.add(lab);
+}
+// dividers with tabs (they stay with the box when the lid floats)
+const TABS = ['WORK', 'WORLDS', 'EDITIONS', 'CONTACT'], dividers = [];
+TABS.forEach((name, i) => {
+  const g = new THREE.Group(); head.add(g);
+  const dv = outlined(new THREE.BoxGeometry(W - .08, H - .06, .006), M.card); dv.position.set(0, (H - .06) / 2 + TH, 0); g.add(dv);
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96; const x = c.getContext('2d'); x.fillStyle = '#F7F4EC'; x.fillRect(0, 0, 256, 96); x.strokeStyle = '#1D1826'; x.lineWidth = 6; x.strokeRect(3, 3, 250, 90);
+  x.fillStyle = '#1D1826'; x.font = '700 44px "IBM Plex Mono",monospace'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(name, 128, 52);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const tab = new THREE.Mesh(new THREE.PlaneGeometry(.22, .084), new THREE.MeshLambertMaterial({ map: t, side: THREE.DoubleSide })); tab.position.set(-W / 2 + .17 + i * ((W - .34) / 3), H + .08, .004); g.add(tab);
+  tag(tab, 'tab', { i }); g.position.z = -D / 2 + .1 + i * .022;
+  dividers.push({ g, tab, i, pull: 0, vel: 0, held: false, name });
+});
+// the lid: its own body in the world, chasing the head
+const lid = new THREE.Group(); scene.add(lid);
+{ const LW = W + .04, LD = D + .04, lt = .022, slitZ = -D / 2 + .13, sw = .1, front = LD / 2 - (slitZ + sw / 2), back = (slitZ - sw / 2) + LD / 2;
+  const lp = (w, h, d, x, y, z) => { const o = outlined(new THREE.BoxGeometry(w, h, d), M.lid); o.position.set(x, y, z); lid.add(o); tag(o, 'lid'); };
+  lp(LW, lt, front, 0, 0, slitZ + sw / 2 + front / 2); lp(LW, lt, back, 0, 0, -LD / 2 + back / 2);
+  lp(LW, LIDH, lt, 0, -LIDH / 2, LD / 2); lp(LW, LIDH, lt, 0, -LIDH / 2, -LD / 2); lp(lt, LIDH, LD, LW / 2, -LIDH / 2, 0); lp(lt, LIDH, LD, -LW / 2, -LIDH / 2, 0); }
+const VIEW = { x0: -1, x1: 1, y0: -1, y1: 1 };                   // visible part of the canvas in screen units (a page may narrow it)
+// the real art on the head: faces flattened from Aoh's box-only image (tools/unwarp_box.py)
+const texL = new THREE.TextureLoader(), T = n => { const t = texL.load('art/tex/' + n + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return new THREE.MeshBasicMaterial({ map: t, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }); };
+const RIM = new THREE.MeshBasicMaterial({ color: 0xEDEDEA, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+{ const F = { front: T('box_front'), back: T('box_back'), left: T('box_left'), right: T('box_right'), inF: T('box_in_front'), inB: T('box_in_back'), inL: T('box_in_left'), inR: T('box_in_right'), floor: T('box_in_floor') };
+  head.children.forEach(o => { if (!o.isMesh) return;
+    if (o.userData.part !== 'box') { o.visible = false; return; }                     // stand-in slots, label and dark inner box
+    const p = o.position, m = [RIM, RIM, RIM, RIM, RIM, RIM];                         // BoxGeometry faces: +x, -x, +y, -y, +z, -z
+    if (p.y < TH) m[2] = F.floor; else if (p.z > D / 2 - TH) { m[4] = F.front; m[5] = F.inF; } else if (p.z < -D / 2 + TH) { m[5] = F.back; m[4] = F.inB; }
+    else if (p.x < 0) { m[1] = F.left; m[0] = F.inL; } else { m[0] = F.right; m[1] = F.inR; }
+    o.material = m; o.children.forEach(c => c.visible = false); }); }
+{ const L = { top: T('lid_top'), front: T('lid_front'), back: T('lid_back'), left: T('lid_left'), right: T('lid_right') }, LW = W + .04, LD = D + .04;
+  lid.children.forEach(o => { if (!o.isMesh) return; const p = o.position, g = o.geometry.parameters, m = [RIM, RIM, RIM, RIM, RIM, RIM];
+    if (g.height < .05) {                                                             // the two top halves share one picture of the lid top
+      const uv = o.geometry.attributes.uv, pos = o.geometry.attributes.position;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + p.x + LW / 2) / LW, 1 - (pos.getZ(i) + p.z + LD / 2) / LD);
+      uv.needsUpdate = true; m[2] = L.top; }
+    else if (p.z > LD / 2 - .05) m[4] = L.front; else if (p.z < -LD / 2 + .05) m[5] = L.back; else if (p.x < 0) m[1] = L.left; else m[0] = L.right;
+    o.material = m; o.children.forEach(c => c.visible = false); }); }
+// ink: thick drawn outlines on every edge of the box and lid, sized like the outline in the Master Final
+const INK_OUT = 8, INK_RIM = 7, INK_IN = 4;                                             // px at the picture's 2000px width (rim 13% thinner, Aoh)
+const inkOut = new LineMaterial({ color: INK, linewidth: 3, alphaToCoverage: true }), inkRim = new LineMaterial({ color: INK, linewidth: 2.6, alphaToCoverage: true }), inkIn = new LineMaterial({ color: INK, linewidth: 1.6, alphaToCoverage: true });
+const edges = (x0, x1, y0, y1, z0, z1) => { const c = (i) => [i & 1 ? x1 : x0, i & 2 ? y1 : y0, i & 4 ? z1 : z0], out = [];
+  for (let i = 0; i < 8; i++) for (const b of [1, 2, 4]) if (!(i & b)) out.push(...c(i), ...c(i | b)); return out; };
+const rect = (x0, x1, y, z0, z1) => [x0, y, z0, x1, y, z0, x1, y, z0, x1, y, z1, x1, y, z1, x0, y, z1, x0, y, z1, x0, y, z0];
+function ink(parent, pos, mat) { const g = new LineSegmentsGeometry(); g.setPositions(pos); const l = new LineSegments2(g, mat); parent.add(l); return l; }
+{ const ix = W / 2 - TH, iz = D / 2 - TH;
+  const box = edges(-W / 2, W / 2, 0, H, -D / 2, D / 2), top = [], rest = [];
+  for (let i = 0; i < box.length; i += 6) (box[i + 1] === H && box[i + 4] === H ? top : rest).push(...box.slice(i, i + 6));
+  ink(head, rest, inkOut);                                                               // the outer box
+  ink(head, [...top, ...rect(-ix, ix, H, -iz, iz)], inkRim);                             // the whole rim of the box body, outer and inner edge
+  ink(head, [...[[-ix, -iz], [ix, -iz], [ix, iz], [-ix, iz]].flatMap(([x, z]) => [x, TH, z, x, H, z]), ...rect(-ix, ix, TH, -iz, iz)], inkIn);   // inside corners and floor
+  const LW = W + .04, LD = D + .04; ink(lid, edges(-LW / 2, LW / 2, -LIDH, .011, -LD / 2, LD / 2), inkOut); }
+dividers.forEach(d => { d.g.visible = false; });                                        // no index tabs on the box: the crowd presents the menus, the menu row below is the safe path
+const lidS = { pos: V(), vel: V(), wob: V(), wobV: V(), lift: 0, pull: V(), held: false, settledAt: 0, pushT: 0, squeezed: 0, seat: 0 };
+
+// the WORK sheet the Maker offers (hidden until he pulls it out of the file)
+const SHEET = { w: .26, h: .34 };
+const sheet = new THREE.Group(); sheet.visible = false; scene.add(sheet);
+const sheetMat = new THREE.MeshLambertMaterial({ transparent: true }), sheetEdge = new THREE.LineBasicMaterial({ color: INK, transparent: true });
+{ const c = document.createElement('canvas'); c.width = 260; c.height = 340; const x = c.getContext('2d');
+  x.fillStyle = '#FBFAF6'; x.fillRect(0, 0, 260, 340); x.strokeStyle = '#1D1826'; x.lineWidth = 5; x.strokeRect(2.5, 2.5, 255, 335);
+  x.fillStyle = '#1D1826'; x.font = '700 40px "IBM Plex Mono",monospace'; x.fillText('WORK', 22, 58);
+  x.lineWidth = 4; x.beginPath(); x.moveTo(30, 110); x.lineTo(30, 250); x.lineTo(190, 250); x.stroke();                    // an L of the frame, the Maker's mark
+  x.lineWidth = 2; x.strokeStyle = 'rgba(29,24,38,.55)'; for (let i = 0; i < 5; i++) { x.beginPath(); x.moveTo(48, 130 + i * 22); for (let k = 0; k < 8; k++) x.lineTo(60 + k * 16, 130 + i * 22 + Math.sin(k * 1.7 + i) * 4); x.stroke(); }
+  x.fillStyle = '#5F5A69'; x.font = '500 16px "IBM Plex Mono",monospace'; x.fillText('SHEET 01 / FRAME', 22, 300);
+  sheetMat.map = new THREE.CanvasTexture(c); sheetMat.map.colorSpace = THREE.SRGBColorSpace; }
+const sheetFace = outlined(new THREE.BoxGeometry(SHEET.w, SHEET.h, .004), sheetMat, sheetEdge); sheet.add(sheetFace); tag(sheetFace, 'sheet');
+// a generous invisible hit pad that moves with the sheet, so a shaking hand is still easy to tap
+const sheetPad = new THREE.Mesh(new THREE.PlaneGeometry(SHEET.w * 1.5, SHEET.h * 1.35), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })); sheet.add(sheetPad); tag(sheetPad, 'sheet');
+
+// the things the crowd offers: one per menu, each owned by one creature (WORLDS: ก้อนดำ, EDITIONS: ก้อนเทา, CONTACT: ก้อนชมพู)
+const ITEMS = [null, { sub: 'ชิ้นโลก', w: .32, h: .25 }, { sub: 'ภาพพิมพ์', w: .27, h: .35 }, { sub: 'บัตรติดต่อ', w: .31, h: .19 }];
+const items = ITEMS.map((it, i) => { if (!it) return null;
+  const c = document.createElement('canvas'); c.width = 256; c.height = Math.round(256 * it.h / it.w); const x = c.getContext('2d'), cw = c.width, ch = c.height;
+  x.fillStyle = '#FBFAF6'; x.fillRect(0, 0, cw, ch); x.strokeStyle = '#1D1826';
+  if (i === 1) { const g = x.createLinearGradient(0, 0, 0, ch); g.addColorStop(0, '#2B2340'); g.addColorStop(1, '#D8106F'); x.fillStyle = g; x.fillRect(20, 20, cw - 40, ch - 76); x.lineWidth = 4; x.strokeRect(20, 20, cw - 40, ch - 76); }   // a window into a world
+  if (i === 2) { x.lineWidth = 3; x.strokeRect(28, 28, cw - 56, ch - 104); x.fillStyle = '#1D1826'; x.beginPath(); x.arc(cw * .6, ch * .3, 26, 0, 7); x.fill(); x.fillRect(40, ch * .5, cw - 80, 10); } // a proof print
+  if (i === 3) { x.lineWidth = 3; for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(24, 34 + k * 26); x.lineTo(cw - 60 - k * 30, 34 + k * 26); x.stroke(); } }   // a note card
+  x.lineWidth = 6; x.strokeRect(3, 3, cw - 6, ch - 6); x.fillStyle = '#1D1826'; x.font = '700 30px "IBM Plex Mono",monospace'; x.textAlign = 'center'; x.fillText(TABS[i], cw / 2, ch - 18);
+  const m = new THREE.MeshLambertMaterial({ transparent: true }); m.map = new THREE.CanvasTexture(c); m.map.colorSpace = THREE.SRGBColorSpace;
+  const em = new THREE.LineBasicMaterial({ color: INK, transparent: true }), g = new THREE.Group(); g.visible = false; scene.add(g);
+  const face = outlined(new THREE.BoxGeometry(it.w, it.h, .004), m, em); g.add(face); tag(face, 'item', { i });
+  const pad = new THREE.Mesh(new THREE.PlaneGeometry(it.w * 1.6, it.h * 1.6), sheetPad.material); g.add(pad); tag(pad, 'item', { i });
+  return { ...it, i, g, m, em, pos: V(), vel: V() }; });
+
+// ---------------------------------------------------------------- thought crowd (placeholders) + one hiding behind
+function makeEyes(parent, r) { const g = new THREE.Group(); parent.add(g); const pupils = [], balls = [], brows = [];
+  for (const x of [-.36, .36]) { const e = new THREE.Mesh(sphGeo, M.eye); e.scale.setScalar(r * .34); e.position.set(x * r, r * .25, r * .82); g.add(e); const p = new THREE.Mesh(sphGeo, M.pupil); p.scale.setScalar(.5); e.add(p); pupils.push(p); balls.push(e);
+    const b = new THREE.Mesh(boxGeo, M.pupil); b.scale.set(r * .4, r * .07, r * .08); b.position.set(x * r, r * .67, r * .86); b.visible = false; g.add(b); brows.push({ b, s: Math.sign(x) }); }
+  return { g, pupils, balls, brows, r }; }
+const crowd = [
+  { name: 'ก้อนดำ', r: .12, m: M.c0, anchor: V(-.22, .42, .08) },
+  { name: 'ก้อนเทา', r: .1, m: M.c1, anchor: V(.22, .4, .12) },
+  { name: 'ก้อนชมพู', r: .075, m: M.c2, anchor: V(.02, .38, -.1) },
+].map((c, i) => { const g = new THREE.Group(); scene.add(g); const b = new THREE.Mesh(sphGeo, c.m); b.scale.set(c.r, c.r * .9, c.r); g.add(b);
+  const eyes = makeEyes(g, c.r); const arm = limb(.022, c.m); arm.g.visible = false; const hand = limb(.018, c.m); hand.g.visible = false;
+  return { ...c, i, id: 'm' + i, g, eyes, arm, hand, lookOwner: 0, pos: V(), vel: V(), glareUntil: 0, grabbing: false, pre: false, holdUntil: 0, peek: 0, squash: 0 }; });
+const hider = (() => { const g = new THREE.Group(); head.add(g); const b = new THREE.Mesh(sphGeo, M.c0); b.scale.set(.06, .055, .06); g.add(b); const eyes = makeEyes(g, .06);
+  const hands = limb(.012, M.c0, g); g.position.set(.18, H * .42, -D / 2 - .06); g.rotation.y = Math.PI;
+  return { g, eyes, hands, state: 'busy', seen: 0, t: 0, hidden: 0 }; })();
+
+// ---------------------------------------------------------------- head physics state
+const HS = { yaw: 0, pitch: 0, roll: 0, wy: 0, wp: 0, wr: 0, prevW: V(), acc: 0, dist: 0, speed: 0 };
+const LIM = { yaw: 1.5, pitchLo: -.2, pitchHi: .32, rollLo: -.2, rollHi: .3 };   // checked against art/camera_v3.json: the box bottom never faces the viewer
+const BAND = { give: .12, bend: 25, back: 160, hard: .06 };          // past a limit: how much the hand still moves it, how fast that fades, how hard it springs back, absolute overshoot
+// the window in which the Maker can still see his paper; he only straightens his head back into it
+const WIN = { yaw: .3, pitchLo: -.12, pitchHi: .18, roll: .06 };
+const inWin = () => Math.abs(HS.yaw) <= WIN.yaw && HS.pitch >= WIN.pitchLo && HS.pitch <= WIN.pitchHi && Math.abs(HS.roll) <= WIN.roll;
+let drag = null, lastInput = -99, writing = true, penResume = 0, fixing = null, time = 0, lastSign = 0, lastSignT = -9, eventText = '', eventWhy = '', eventT = -9;
+function say(ev, why) { eventText = ev; eventWhy = why; eventT = time; $('ev').textContent = ev; $('why').textContent = why; }
+
+// ---------------------------------------------------------------- mood + memory
+// dizzy: comes from how hard the head moves, leaves fast. annoyed: only from being disturbed while busy, stacks on repeats, leaves slowly.
+const WHO = { maker: 'Maker', m0: 'ก้อนดำ', m1: 'ก้อนเทา', m2: 'ก้อนชมพู', hider: 'ตัวหลังกล่อง' };
+const WHAT = { jolted: 'โดนกระชาก', reversed: 'โดนสะบัดกลับทิศ', 'lid-pulled': 'ฝาโดนดึง', 'held-lid': 'จับฝาไว้', 'pre-grab': 'คว้าฝารอ (จำได้)', 'tab-pulled': 'แฟ้มโดนดึง',
+  caught: 'ถูกเห็น', squashed: 'โดนฝาบีบลงกล่อง', offered: 'ยื่นของ', teased: 'โดนแหย่ (ชี้แล้วไม่เอา)', 'item-taken': 'ของถูกรับ', 'asked-for-work': 'ถูกขอดูงาน', 'work-taken': 'งานถูกรับ', 'work-returned': 'เก็บงานคืน', 'head-fixed': 'จัดหัวเอง', 'fix-interrupted': 'ถูกขัดตอนจัดหัว' };
+const DOING = { writing: 'กำลังเขียน', 'holding-lid': 'กำลังจับฝา', 'watching-pencil': 'กำลังดูดินสอ', busy: 'กำลังง่วนอยู่', offering: 'กำลังยื่นงาน', 'offering-item': 'กำลังยื่นของ', 'fixing-head': 'กำลังจัดหัว', idle: 'ว่างอยู่' };
+const DISTURB = ['jolted', 'reversed', 'lid-pulled', 'tab-pulled', 'caught', 'fix-interrupted', 'teased', 'squashed'];
+const SENS = { maker: .35, m0: 1, m1: 1, m2: 1, hider: .7 };
+const mood = Object.fromEntries(Object.keys(WHO).map(k => [k, { dz: 0, an: 0, lastHit: -99 }]));
+const mem = []; let memDirty = true;
+function remember(who, what, whileDoing) { mem.push({ who, what, whileDoing, t: +time.toFixed(1) }); if (mem.length > 80) mem.shift(); memDirty = true; }
+function doing(who) {
+  if (who === 'maker') return act ? 'offering' : fixing ? 'fixing-head' : writing || time - wroteAt < 4 ? 'writing' : 'idle';   // a pencil stopped by us is still work interrupted
+  if (who === 'hider') return hider.state === 'busy' ? 'busy' : 'idle';
+  const cr = crowd[+who.slice(1)];
+  return offer.i === cr.i + 1 && offer.phase !== 'none' ? 'offering-item' : cr.grabbing || lidS.pushT > 0 ? 'holding-lid' : cr.i === 2 && writing ? 'watching-pencil' : 'idle';
+}
+function disturb(who, what, s = 1) {
+  const w = doing(who), m = mood[who];
+  const repeats = mem.filter(e => e.who === who && DISTURB.includes(e.what) && e.whileDoing !== 'idle' && time - e.t < 8).length;
+  if (w !== 'idle' || !['jolted', 'reversed'].includes(what)) remember(who, what, w);        // idle bystanders getting shaken is not worth a memory
+  if (w === 'idle') return;
+  m.an = Math.min(1, m.an + s * .1 * (1 + repeats * .7)); m.lastHit = time;
+  if (who !== 'maker' && m.an > .3 && Math.random() < .6) setTimeout(() => sfx.mutter(.5 + m.an * .5), 120);
+}
+function moodStep(dt, jolt) {
+  for (const [id, m] of Object.entries(mood)) {
+    m.dz = clamp(m.dz + ((Math.max(0, jolt - .15) * 1.4 + Math.max(0, HS.speed - 2) * .5) * SENS[id] - P.kDz) * dt, 0, 1);
+    if (time - m.lastHit > 3) m.an = Math.max(0, m.an - P.kAn * dt);
+  }
+}
+
+// ---------------------------------------------------------------- WORK acting: lose balance → recover → reach → offer → shake → steady → hold
+const PH = { lose: .8, recover: .7, reach: .6, offer: .8, shake: 1.4, steady: .8, hold: 10, back: .7, taken: .9 };
+const NEXT = { lose: 'recover', recover: a => a.hasSheet ? 'shake' : 'reach', reach: 'offer', offer: 'shake', shake: 'steady', steady: 'hold', hold: 'back', back: null, taken: null };
+const SAYS = { lose: ['เสียหลัก', 'แท็บกระชากหัว ตัวเอนตามไปด้วย'], recover: ['ตั้งตัว', 'กลับมานั่งให้มั่นก่อน'], reach: ['หยิบงาน', 'มือล้วงเข้าแฟ้ม WORK'],
+  offer: ['ยื่นงาน', 'ยื่นแผ่นงานมาทางเรา กดแผ่นได้ตั้งแต่ตอนนี้'], shake: ['มือยังสั่น', 'แรงเมื่อกี้ยังค้างในแขน แต่กดแผ่นได้'], steady: ['อีกมือช่วยประคอง', 'เอามืออีกข้างมาจับให้นิ่ง'],
+  hold: ['รอให้รับ', 'กดแผ่นงานเพื่อเปิด WORK'], back: ['เก็บคืน', 'ไม่มีใครรับ เก็บเข้าแฟ้มแล้วเขียนต่อ'], taken: ['รับงานแล้ว', 'ปล่อยแผ่นแล้วกลับไปทำงาน'] };
+const OFFER = V(1.35, .40, -7.6), KNEE_L = V(-.3, .66, .34);
+let act = null, selfYank = -9, lastHR = V(.1, .2, .6), lastHL = KNEE_L.clone();
+const bal = { x: 0, z: 0, vx: 0, vz: 0 };
+
+// ---------------------------------------------------------------- menu offers: contest → owner wins and holds the item out → taken, or retreat (teased)
+const offer = { i: -1, phase: 'none', t: 0, away: 0, auto: 0, done: -1 };   // done: the menu just opened; it won't be offered again until the pointer leaves it
+const HOLD = V(.82, H + .06, .62);                      // head-local: past the front-right corner, clear of the lid, in the empty right side
+let hoverTab = -1, hoverItem = -1, rolled = false, rollAt = -9;
+function startOffer(i, quick) { const own = crowd[i - 1];
+  if (offer.i === i && ['contest', 'hold'].includes(offer.phase)) { if (quick) offer.auto = .01; return; }
+  const w = doing(own.id); offer.i = i; offer.phase = quick ? 'hold' : 'contest'; offer.t = 0; offer.away = 0; offer.auto = quick ? .35 : 0;
+  remember(own.id, 'offered', w); sfx.rustle();
+  say(quick ? own.name + ' ยื่น' + ITEMS[i].sub : 'แย่งกันยื่น', quick ? 'แตะแท็บแล้วเปิดเลย ไม่ต้องรอดูการแย่ง' : 'ทุกตัวอยากยื่นของตัวเอง แต่แท็บ ' + TABS[i] + ' เป็นของ' + own.name); }
+function openItem(i) { const own = crowd[i - 1]; offer.i = i; offer.phase = 'taken'; offer.done = i; offer.t = 0; offer.auto = 0;
+  remember(own.id, 'item-taken', 'offering-item'); mood[own.id].an = Math.max(0, mood[own.id].an - .3);
+  toast('เปิด ' + TABS[i] + ' (ตัวอย่าง ยังไม่มีหน้าจริง)'); sfx.pip(); say('รับของแล้ว', own.name + ' ปล่อยของให้ แล้วจมกลับลงกล่องอย่างพอใจ'); }
+function setPhase(p) { act.phase = p; act.pt = 0; act.fromR = act.hR.clone(); act.fromL = act.hL.clone(); act.fromS = act.S.clone(); say(...SAYS[p]);
+  if (p === 'offer') { act.hasSheet = true; sheet.visible = true; sfx.rustle(); } }
+function startWork() {
+  if (act) { if (act.hasSheet && act.phase !== 'taken') takeSheet(); return; }
+  const w = doing('maker');
+  act = { phase: 'lose', pt: 0, hasSheet: false, shake: 1, hR: lastHR.clone(), hL: lastHL.clone(), S: lastHR.clone() };
+  setPhase('lose'); fixing = null; writing = false; selfYank = time;
+  HS.wp -= 1.4; HS.wr += .9; bal.vx += 1.3; bal.vz -= 1;                                   // the tab yanks the head, the body goes with it
+  remember('maker', 'asked-for-work', w); sfx.thud(.5);
+}
+function takeSheet() { if (!act || !act.hasSheet || act.phase === 'taken') return; remember('maker', 'work-taken', 'offering'); setPhase('taken'); sfx.pip(); toast('เปิด WORK (ตัวอย่าง ยังไม่มีหน้าจริง)'); }
+function endAct() { if (act.phase === 'back') remember('maker', 'work-returned', 'offering'); act = null; sheet.visible = false; sheet.scale.setScalar(1); sheetMat.opacity = sheetEdge.opacity = 1; lastInput = time; penResume = time + .4; }
+
+// ---------------------------------------------------------------- camera
+function layout() { const r = stage.getBoundingClientRect();
+  const k = Math.min(r.height * .37 / 1100, r.width * .5 / 1040), L = r.width / 2 - 900 * k, Tp = r.height / 2 - 560 * k;
+  renderer.setSize(r.width, r.height, false); cv.style.width = r.width + 'px'; cv.style.height = r.height + 'px';
+  camera.aspect = 2000 / 1125; camera.setViewOffset(2000 * k, 1125 * k, -L, -Tp, r.width, r.height); camera.updateProjectionMatrix();
+  plateCam.left = -L / k; plateCam.right = (r.width - L) / k; plateCam.top = Tp / k; plateCam.bottom = -(r.height - Tp) / k; plateCam.updateProjectionMatrix();
+  Object.assign($('ref').style, { left: L + 'px', top: Tp + 'px', width: 2000 * k + 'px', height: 1125 * k + 'px' });
+  for (const [m, px] of [[inkOut, INK_OUT], [inkRim, INK_RIM], [inkIn, INK_IN]]) { m.linewidth = Math.max(1.6, px * k); m.resolution.set(r.width, r.height); } }
+function setCam() {}
+addEventListener('resize', layout);
+
+// ---------------------------------------------------------------- input
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const shown = o => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+function hitAt(e) { const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, camera);
+  const hs = ray.intersectObjects(pick, false).filter(h => shown(h.object)); return hs.find(h => ['sheet', 'item'].includes(h.object.userData.part)) || hs[0]; }   // the offered sheet wins over whatever is behind it
+function planePoint(e, through) { const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, camera);
+  const n = camera.getWorldDirection(V()).negate(), pl = new THREE.Plane().setFromNormalAndCoplanarPoint(n, through), out = V(); ray.ray.intersectPlane(pl, out); return out; }
+let hover = false, pointerSeen = -99;
+cv.addEventListener('pointerdown', e => {
+  audioStart(); const h = hitAt(e); if (!h) return; lastInput = time;
+  const part = h.object.userData.part, local = head.worldToLocal(h.point.clone());
+  if (part === 'sheet') { takeSheet(); return; }
+  if (part === 'item') { openItem(h.object.userData.i); return; }
+  cv.setPointerCapture(e.pointerId); cv.classList.add('grabbing');
+  if (part === 'lid') { drag = { part, id: e.pointerId, start: planePoint(e, lidS.pos), base: lidS.pull.clone() }; lidS.held = true; sfx.clack(.5); say('จับฝา', 'ดึงฝาแยกจากหัว สิ่งข้างในจะพยายามคว้าไว้'); }
+  else if (part === 'tab') { const d = dividers[h.object.userData.i]; d.held = true; drag = { part, id: e.pointerId, d, y0: e.clientY, t0: time, base: d.pull }; sfx.rustle(); say('ดึงแท็บ ' + d.name, 'กระดาษในแฟ้มเลื่อนขึ้นตามมือ'); }
+  else {
+    drag = { part: 'box', id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), side: Math.sign(local.x) || 1, high: local.y > H * .5 ? 1 : -1, dx: 0, dy: 0 };
+    if (fixing) { disturb('maker', 'fix-interrupted'); fixing = null; }
+    // memory: whoever had to hold the lid last time reaches for it before it even moves
+    const last = [...mem].reverse().find(m => m.what === 'held-lid');
+    if (last && P.lidMode !== 'closed') { const c = crowd[+last.who.slice(1)];
+      if (!c.grabbing) { if (grabber && grabber !== c) grabber.grabbing = false; remember(c.id, 'pre-grab', doing(c.id)); grabber = c; c.grabbing = true; c.pre = true; c.holdUntil = 0; sfx.mutter(.5); say('จำได้', c.name + ' คว้าฝารอไว้ก่อน รอบที่แล้วมันต้องจับฝา'); }
+      else c.pre = true; }
+  }
+});
+cv.addEventListener('pointermove', e => {
+  pointerSeen = time;
+  if (!drag || e.pointerId !== drag.id) { const h = hitAt(e), u = h ? h.object.userData : {}; hover = !!h; hoverTab = u.part === 'tab' ? u.i : -1; hoverItem = u.part === 'item' ? u.i : -1;
+    cv.style.cursor = h ? (u.part === 'tab' ? 'ns-resize' : ['sheet', 'item'].includes(u.part) ? 'pointer' : 'grab') : 'default'; return; }
+  lastInput = time;
+  if (drag.part === 'box') { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.dx += dx; drag.dy += dy; }
+  else if (drag.part === 'lid') { const p = planePoint(e, lidS.pos); lidS.pull.copy(drag.base).add(p.sub(drag.start)); if (lidS.pull.length() > .9) lidS.pull.setLength(.9); }
+  else if (drag.part === 'tab') { drag.d.pull = clamp(drag.base + (drag.y0 - e.clientY) / cv.clientHeight * 1.4, 0, .36); }
+});
+function endDrag(e) {
+  if (!drag || (e && e.pointerId !== drag.id)) return; cv.classList.remove('grabbing');
+  if (drag.part === 'box') { releasedAt = time; snapSaid = false; const w = Math.hypot(HS.wy, HS.wp); if (!act) { if (w < 1) say('ปล่อยเบา', P.recenter === 'snap' ? 'ค้างแป๊บหนึ่ง แล้วเขาจะสะบัดหัวกลับ' : 'หัวค้างมุมไว้ให้ดูต่อ ไม่เด้งกลับเอง'); else say('ปล่อยหลังสะบัด', 'แรงไหลต่ออีกนิดแล้วค่อยสงบ ข้างในยังไม่หายตกใจ'); }
+    crowd.forEach(c => { if (c.pre) { c.pre = false; if (c.grabbing && !c.holdUntil) c.holdUntil = time + .9 + mood[c.id].an; } }); }
+  if (drag.part === 'lid') { lidS.held = false; sfx.thud(.4); say('ปล่อยฝา', 'ฝาดีดกลับ คนที่คว้าไว้ยังไม่ยอมปล่อยทันที'); }
+  if (drag.part === 'tab') { const d = drag.d; d.held = false; const tap = time - drag.t0 < .35 && e && Math.abs(e.clientY - drag.y0) < 8;
+    if (d.pull > .22 || tap) {
+      if (!tap && !act) disturb('maker', 'tab-pulled', .5);
+      if (d.i === 0) startWork(); else if (offer.i === d.i && offer.phase === 'hold') openItem(d.i); else startOffer(d.i, true); } }
+  drag = null;
+}
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag); cv.addEventListener('pointerleave', () => { hover = false; hoverTab = hoverItem = -1; });
+let toastT = 0; function toast(s) { const t = $('toast'); t.textContent = s; t.hidden = false; toastT = 2.2; }
+
+// ---------------------------------------------------------------- simulation
+const clock = new THREE.Clock();
+let grabber = null, joltOn = false, wroteAt = -99, revAt = -9, releasedAt = -99, snapSaid = true;
+function clampHead() {                                             // hard stops a little past the soft limits
+  const c = (k, w, lo, hi) => { if (HS[k] < lo - BAND.hard) { HS[k] = lo - BAND.hard; HS[w] = Math.max(0, HS[w]); } if (HS[k] > hi + BAND.hard) { HS[k] = hi + BAND.hard; HS[w] = Math.min(0, HS[w]); } };
+  c('yaw', 'wy', -LIM.yaw, LIM.yaw); c('pitch', 'wp', LIM.pitchLo, LIM.pitchHi); c('roll', 'wr', LIM.rollLo, LIM.rollHi); }
+function step(dt) {
+  time += dt;
+  if (writing) wroteAt = time;
+  // ---- head: the hand turns it exactly while held; on release it keeps its momentum; limits resist softly
+  const prev = V(HS.wy, HS.wp, HS.wr);
+  if (drag && drag.part === 'box') {
+    const k = .0075, ty = drag.dx * k, tp = drag.dy * k * .8, tr = drag.dy * k * .35 * drag.side * -1 + drag.dx * k * .15 * drag.high;
+    drag.dx = 0; drag.dy = 0;
+    const res = (v, lo, hi) => v > hi ? BAND.give / (1 + (v - hi) * BAND.bend) : v < lo ? BAND.give / (1 + (lo - v) * BAND.bend) : 1;   // rubber band past the limits
+    const dy = ty * res(HS.yaw, -LIM.yaw, LIM.yaw), dp = tp * res(HS.pitch, LIM.pitchLo, LIM.pitchHi), dr = tr * res(HS.roll, LIM.rollLo, LIM.rollHi);
+    HS.yaw += dy; HS.pitch += dp; HS.roll += dr; clampHead();
+    HS.wy = damp(HS.wy, dy / dt, 18, dt); HS.wp = damp(HS.wp, dp / dt, 18, dt); HS.wr = damp(HS.wr, dr / dt, 18, dt);
+  } else if (!fixing) {
+    const f = Math.exp(-P.kHead * dt); HS.wy *= f; HS.wp *= f; HS.wr *= f;
+    const soft = (v, lo, hi) => v > hi ? -(v - hi) * BAND.back : v < lo ? -(v - lo) * BAND.back : 0;
+    const outside = HS.yaw > LIM.yaw || HS.yaw < -LIM.yaw || HS.pitch > LIM.pitchHi || HS.pitch < LIM.pitchLo || HS.roll > LIM.rollHi || HS.roll < LIM.rollLo; if (outside) { const g = Math.exp(-9 * dt); HS.wy *= g; HS.wp *= g; HS.wr *= g; }
+    HS.wy += soft(HS.yaw, -LIM.yaw, LIM.yaw) * dt; HS.wp += soft(HS.pitch, LIM.pitchLo, LIM.pitchHi) * dt; HS.wr += (soft(HS.roll, LIM.rollLo, LIM.rollHi) - HS.roll * 1.2) * dt; // roll wants to level a little (gravity on the neck)
+    // "don't mess with me, I'm working": a beat after the hand lets go, he flicks his head straight back (the cause for recentering)
+    if (P.recenter === 'snap' && time - releasedAt > .28) {
+      const k = 70 * (1 + mood.maker.an * .6), c = 2 * Math.sqrt(k) * .42;
+      HS.wy += (-k * HS.yaw - c * HS.wy) * dt; HS.wp += (-k * HS.pitch - c * HS.wp) * dt; HS.wr += (-k * HS.roll - c * HS.wr) * dt;
+      if (Math.abs(HS.yaw) + Math.abs(HS.pitch) + Math.abs(HS.roll) > .05) selfYank = time;       // his own snap is not a disturbance
+      if (!snapSaid && Math.abs(HS.yaw) + Math.abs(HS.pitch) + Math.abs(HS.roll) > .15) { snapSaid = true; sfx.clack(.35); if (!act) say('สะบัดกลับ', 'อย่ามายุ่ง กำลังทำงานอยู่'); }
+    }
+    HS.yaw += HS.wy * dt; HS.pitch += HS.wp * dt; HS.roll += HS.wr * dt; clampHead();
+  }
+  const accV = V(HS.wy, HS.wp, HS.wr).sub(prev).divideScalar(Math.max(dt, 1e-3));
+  HS.acc = damp(HS.acc, accV.length(), 12, dt); HS.speed = Math.hypot(HS.wy, HS.wp, HS.wr);
+  // ---- reading the gesture: speed, sudden stop, reversal
+  const sign = Math.abs(HS.wy) > 1.6 ? Math.sign(HS.wy) : 0;
+  if (sign && lastSign && sign !== lastSign && time - lastSignT < .45 && time - selfYank > .6) { HS.dist = Math.min(1, HS.dist + .55); onReverse(); }   // his own snap back is not the viewer reversing
+  if (sign) { lastSign = sign; lastSignT = time; }
+  const jolt = HS.acc / 60; if (jolt > P.kStart) { HS.dist = Math.min(1, HS.dist + jolt * dt * 3); }
+  // one jolt = one event per witness (the Maker's own yank from the tab doesn't count twice)
+  if (jolt > P.kStart && !joltOn && time - selfYank > .6) { joltOn = true;
+    for (const id in mood) disturb(id, 'jolted', .8);
+    if (act && ['reach', 'offer', 'shake', 'steady', 'hold'].includes(act.phase)) {                                   // new force mid-acting: stumbles again, keeps the sheet
+      if (act.phase === 'reach') act.hasSheet = false; bal.vx += (Math.sign(HS.wy) || 1) * 1.1; bal.vz -= .6; act.shake = 1;
+      setPhase('lose'); say('โดนอีกรอบ', act.hasSheet ? 'เสียหลักอีกครั้ง แต่ยังกำแผ่นงานไว้' : 'เสียหลักก่อนหยิบงานทัน ต้องเริ่มตั้งตัวใหม่'); } }
+  if (jolt < P.kStart * .5) joltOn = false;
+  moodStep(dt, jolt);
+  if (drag && drag.part === 'box' && !act && HS.speed < 1.1 && HS.speed > .15 && time - eventT > .6 && HS.dist < .2 && eventText !== 'จำได้') say('ลากช้า', 'สำรวจได้สงบ ข้างในแค่มองตามหรือหลบทาง');
+  if (HS.speed > 3.2 && time - eventT > .5 && !eventText.startsWith('กลับทิศ') && !act) say('สะบัด', 'ฝาตามไม่ทัน ตัวข้างในต้องเกาะ Maker หยุดดินสอ');
+  HS.dist = Math.max(0, HS.dist - dt * .22);
+  if ((HS.dist > .35 || mood.maker.dz > .45) && writing) { writing = false; penResume = time + .8 + HS.dist * 1.6; }
+  if (!writing && HS.dist < .2 && mood.maker.dz < .25 && time > penResume && !fixing && !act) writing = true;
+
+  // ---- WORK acting clock
+  if (act) { act.pt += dt; if (act.pt >= PH[act.phase]) { const n = NEXT[act.phase], nx = typeof n === 'function' ? n(act) : n; if (nx) setPhase(nx); else endAct(); } }
+
+  // ---- Maker fixes his head when it is left outside the working window, and only back to its edge
+  const wait = P.kIdle * (1 - .55 * mood.maker.an);                                                                     // annoyed: less patient
+  if (!drag && !fixing && !act && time - lastInput > wait && !inWin() && HS.speed < .2) {
+    const to = { y: clamp(HS.yaw, -WIN.yaw * .8, WIN.yaw * .8), p: clamp(HS.pitch, WIN.pitchLo * .7, WIN.pitchHi * .7), r: clamp(HS.roll, -.015, .015) };
+    fixing = { t: 0, from: { y: HS.yaw, p: HS.pitch, r: HS.roll }, to, dur: 1.1 * (1 - .4 * mood.maker.an) }; writing = false; remember('maker', 'head-fixed', 'idle');
+    say('Maker จัดหัวพอทำงานได้', to.y || to.p ? `ไม่กลับตรงเป๊ะ ยังเหลือหัน ${Math.round(Math.abs(to.y) * 57.3)}° ตามที่เราหมุนไว้ แค่พอให้เห็นกระดาษ` : 'จัดแค่พอเห็นกระดาษ แล้วเขียนต่อ'); }
+  if (fixing) { fixing.t += dt; const e = smooth(clamp((fixing.t - .6) / fixing.dur, 0, 1));
+    HS.yaw = lerp(fixing.from.y, fixing.to.y, e); HS.pitch = lerp(fixing.from.p, fixing.to.p, e); HS.roll = lerp(fixing.from.r, fixing.to.r, e); HS.wy = HS.wp = HS.wr = 0;
+    if (fixing.t > .6 + fixing.dur + .5) { fixing = null; writing = true; lastInput = time; } }
+
+  // ---- body balance: a spring the acting can knock over; dizziness adds a slow circle
+  const bk = 40, bc = 2 * Math.sqrt(bk) * (act && act.phase === 'recover' ? .95 : .32);
+  bal.vx += (-bk * bal.x - bc * bal.vx) * dt; bal.vz += (-bk * bal.z - bc * bal.vz) * dt; bal.x += bal.vx * dt; bal.z += bal.vz * dt;
+  const mz = mood.maker, sway = V(bal.x * .12 + Math.cos(time * 3.1) * .03 * mz.dz, 0, bal.z * .12 + Math.sin(time * 3.1) * .03 * mz.dz);
+
+  head.rotation.set(HS.pitch + BOB.p, HS.yaw + BOB.y, HS.roll + BOB.r); head.scale.setScalar(P.headScale);
+  head.updateMatrixWorld(true); head.getWorldQuaternion(hq);
+
+  // ---- lid: floats on a spring above the head, lags, wobbles, can be pulled away
+  const wantLift = P.lidMode === 'float' ? 1 : P.lidMode === 'closed' ? 0 : (hover || drag || HS.dist > .15 || time - pointerSeen < 1.2) ? 1 : 0;
+  lidS.lift = damp(lidS.lift, wantLift, wantLift ? 3.5 : 2, dt);
+  const home = head.localToWorld(V(0, H + .012 + LIFT * lidS.lift + Math.sin(time * 2.1) * .012 * lidS.lift, 0));
+  const target = home.clone().add(lidS.pull);
+  if (!lidS.held) lidS.pull.multiplyScalar(Math.exp(-4 * dt));
+  // the crowd holds an open lid up from inside: pushing it down meets their resistance until they give up and duck;
+  // even then it only closes down to the rim, never into the box
+  const RIM_Y = H + .012, guard = lidS.squeezed ? 0 : .2 * Math.min(1, lidS.lift * 1.5);
+  { const tl = head.worldToLocal(target.clone()), over = RIM_Y + guard - tl.y;
+    if (over > 0 && Math.abs(tl.x) < W && Math.abs(tl.z) < D) {
+      if (lidS.held && over > .12 && !lidS.squeezed) { lidS.pushT += dt; if (lidS.pushT > .35) { lidS.squeezed = time; squeezeCrowd(); } }
+      tl.y = Math.max(RIM_Y, RIM_Y + guard - over * (lidS.squeezed ? 1 : .22));
+      const g = clamp((RIM_Y + LIDH - tl.y) / LIDH, 0, 1); tl.x *= 1 - g; tl.z *= 1 - g;       // the skirt slides over the walls, so a lid that comes down gets centred
+      target.copy(head.localToWorld(tl)); }
+    else lidS.pushT = Math.max(0, lidS.pushT - dt * 2); }
+  if (lidS.squeezed && !lidS.held && time - lidS.squeezed > .8) { lidS.squeezed = 0; lidS.pushT = 0; releaseCrowd(); }
+  const k = P.kLid * (lidS.lift < .05 ? 6 : 1), c = 2 * Math.sqrt(k) * (lidS.lift < .05 ? 1 : .45);
+  if (lidS.pos.lengthSq() === 0) lidS.pos.copy(target);
+  lidS.vel.addScaledVector(target.clone().sub(lidS.pos), k * dt).multiplyScalar(Math.exp(-c * dt)); lidS.pos.addScaledVector(lidS.vel, dt);
+  { const hl = head.worldToLocal(lidS.pos.clone());                                         // the rim is solid
+    lidS.seat = Math.abs(hl.x) < W && Math.abs(hl.z) < D ? clamp((RIM_Y + LIDH - hl.y) / LIDH, 0, 1) : 0;   // 1 = sitting on the rim
+    if (lidS.seat > 0) { hl.x *= 1 - lidS.seat * .5; hl.z *= 1 - lidS.seat * .5; }
+    if (hl.y < RIM_Y && Math.abs(hl.x) < W && Math.abs(hl.z) < D) { hl.y = RIM_Y; if (lidS.vel.length() > .6) sfx.clack(Math.min(1, lidS.vel.length() / 3)); lidS.vel.multiplyScalar(.3); }
+    lidS.pos.copy(head.localToWorld(hl)); }
+  { const p = lidS.pos.clone().project(camera), m = .16;                                  // the lid never leaves the screen
+    const x = clamp(p.x, VIEW.x0 + m, VIEW.x1 - m), y = clamp(p.y, VIEW.y0 + m, VIEW.y1 - m * 1.3);
+    if (x !== p.x || y !== p.y) { lidS.pos.copy(V(x, y, p.z).unproject(camera)); lidS.vel.multiplyScalar(.5); } }
+  const lidY = head.worldToLocal(lidS.pos.clone()).y;
+  // wobble driven by the head's angular acceleration
+  lidS.wobV.x += (-accV.y * .004 - lidS.wob.x * 60) * dt; lidS.wobV.z += (accV.x * .004 + accV.z * .003 - lidS.wob.z * 60) * dt; lidS.wobV.multiplyScalar(Math.exp(-(lidS.lift < .05 ? 9 : 3.2) * dt));
+  lidS.wob.addScaledVector(lidS.wobV, dt); lidS.wob.clampScalar(-.5, .5);
+  lid.position.copy(lidS.pos); lid.scale.setScalar(P.headScale); lid.quaternion.copy(hq); lid.rotateX((lidS.wob.x + lidS.pull.z * .6) * (1 - .75 * lidS.seat)); lid.rotateZ((lidS.wob.z - lidS.pull.x * .6) * (1 - .75 * lidS.seat));   // a seated lid sits nearly flat, still rattles a little
+  const lidLag = lidS.pos.distanceTo(home);
+  if (lidLag < .06 && lidS.wob.length() < .06) { if (!lidS.settledAt) lidS.settledAt = time; } else lidS.settledAt = 0;
+
+  // ---- dividers slide with the hand, then fall back into the file (the Maker lifts WORK himself when he reaches for it)
+  dividers.forEach(d => { if (act && act.phase === 'reach' && d.i === 0) { d.pull = damp(d.pull, .28, 10, dt); d.vel = 0; }
+    else if (!d.held) { d.vel += (-d.pull * 90) * dt; d.vel *= Math.exp(-9 * dt); d.pull = Math.max(0, d.pull + d.vel * dt); } else d.vel = 0;
+    d.g.position.y = d.pull; d.g.rotation.x = -HS.pitch * .35 + Math.sin(time * 3 + d.name.length) * .01 * lidS.lift; });
+
+  // ---- who holds the lid: the one who did last time, unless it's too dizzy; holds on a beat longer when annoyed
+  const needGrab = lidS.lift > .4 && (lidS.held || lidLag > .14 || lidS.wob.length() > .12);
+  if (needGrab && !grabber) { const g = pickGrabber(), w = doing(g.id); grabber = g; g.grabbing = true; g.holdUntil = 0; sfx.mutter(.8); remember(g.id, 'held-lid', w); }
+  if (grabber) { const g = grabber;
+    if (needGrab || g.pre) g.holdUntil = 0;
+    else if (!g.holdUntil && lidS.settledAt) g.holdUntil = time + (1.1 + HS.dist) * (1 + mood[g.id].an);            // emotional inertia: holds on, staring
+    if (g.holdUntil && time > g.holdUntil) { g.grabbing = false; g.holdUntil = 0; grabber = null; } }
+  if (drag && drag.part === 'lid' && grabber && grabber.grabbing && !drag.logged && lidLag > .14) { drag.logged = true; disturb(grabber.id, 'lid-pulled'); }
+
+  // ---- menu offers: pointing at a tab starts a contest, its owner wins; leaving without taking the item counts as teasing
+  const wantI = hoverTab > 0 ? hoverTab : hoverItem > 0 ? hoverItem : -1;
+  if (wantI !== offer.done) offer.done = -1;
+  if (wantI > 0 && wantI !== offer.done && (offer.i !== wantI || !['contest', 'hold'].includes(offer.phase))) startOffer(wantI);
+  if (offer.phase !== 'none') { offer.t += dt; const own = crowd[offer.i - 1];
+    if (offer.phase === 'contest' && offer.t > .65) { offer.phase = 'hold'; offer.t = 0; const sulk = mood[own.id].an > .45;
+      crowd.forEach(c => { if (c !== own) { c.vel.y -= 1.6; c.vel.x += Math.random() - .5; c.squash = .8; c.lookOwner = time + 1.2; } }); sfx.thud(.35);
+      say(sulk ? own.name + ' งอน แต่ยังยื่น' : own.name + ' ชนะ', sulk ? 'แหย่มันบ่อยไป มันหันหน้าหนี แต่ของยังกดได้' : 'ยื่น' + ITEMS[offer.i].sub + 'ออกมาทางขวา กดของหรือแท็บเพื่อเปิด'); }
+    if (offer.phase === 'hold' && offer.auto && offer.t > offer.auto) openItem(offer.i);
+    if (['contest', 'hold'].includes(offer.phase) && wantI !== offer.i && !offer.auto) { offer.away += dt;
+      if (offer.away > .8) { if (offer.phase === 'hold') disturb(own.id, 'teased', .8); offer.phase = 'retreat'; offer.t = 0; } } else offer.away = 0;
+    if ((offer.phase === 'retreat' && offer.t > .6) || (offer.phase === 'taken' && offer.t > .9)) { offer.phase = 'none'; offer.i = -1; } }
+  if (!rolled && lidS.lift > .7) { rolled = true; rollAt = time; }                          // first time the lid lifts: each one flashes its item once
+
+  // ---- thought crowd: loose bodies inside the box
+  crowd.forEach(cr => {
+    const m = mood[cr.id];
+    const up = lidS.lift > .5 && !lidS.squeezed ? 1 : 0; const peek = lidS.squeezed ? -.08 : up * (cr.i === 0 ? (HS.dist < .15 ? .3 + .06 * Math.sin(time * 1.3) : .18) : cr.i === 1 ? .24 + .04 * Math.sin(time * 1.7 + 1) : .2 + .05 * Math.sin(time * 2.3));
+    cr.peek = damp(cr.peek, peek, 3, dt);
+    const anchor = cr.anchor.clone().add(V(0, cr.peek + Math.sin(time * 2 + cr.i) * .01, 0));
+    const own = offer.i === cr.i + 1, rollU = (time - rollAt - cr.i * .2) / .7, inRoll = rollU > 0 && rollU < 1 && offer.phase === 'none';
+    let itemAt = null;                                                                      // head-local point where this one holds its item
+    if (offer.phase === 'contest') { anchor.lerp(V(.2 + cr.i * .04, H * .8, .2), .8); anchor.x += Math.sin(time * 17 + cr.i * 2) * .05; itemAt = anchor.clone().add(V(.08, cr.r + .1 + Math.abs(Math.sin(time * 9 + cr.i)) * .05, .06)); }
+    else if (own && ['hold', 'taken'].includes(offer.phase)) { anchor.set(.28, H * .85, .26); itemAt = HOLD.clone(); }
+    else if (own && offer.phase === 'retreat') itemAt = anchor.clone().add(V(0, cr.r * .5, 0));
+    else if (inRoll) { anchor.y += Math.sin(Math.PI * rollU) * .18; itemAt = anchor.clone().add(V(0, cr.r + .08, 0)); }
+    const tgt = head.localToWorld(anchor);
+    if (cr.pos.lengthSq() === 0) cr.pos.copy(tgt);
+    const kk = P.kIn, cc = 2 * Math.sqrt(kk) * .5;
+    cr.vel.addScaledVector(tgt.clone().sub(cr.pos), kk * dt).multiplyScalar(Math.exp(-cc * dt)); cr.vel.y -= 1.5 * dt;
+    cr.pos.addScaledVector(cr.vel, dt);
+    // walls: they bump into the inside of the box
+    const L = head.worldToLocal(cr.pos.clone()), r = cr.r, top = Math.min(lidS.lift > .4 ? H + LIFT * lidS.lift - .12 : H - r * .6, lidY - .03 - r * .5); let hit = 0;   // the lid is their ceiling
+    if (L.x > W / 2 - TH - r) { L.x = W / 2 - TH - r; hit++; } if (L.x < -W / 2 + TH + r) { L.x = -W / 2 + TH + r; hit++; }
+    if (L.z > D / 2 - TH - r) { L.z = D / 2 - TH - r; hit++; } if (L.z < -D / 2 + .16 + r) { L.z = -D / 2 + .16 + r; hit++; }
+    if (L.y < TH + r * .9) { L.y = TH + r * .9; } if (L.y > top) { L.y = top; hit++; }
+    if (hit) { cr.pos.copy(head.localToWorld(L)); const imp = cr.vel.length(); cr.vel.multiplyScalar(.35); if (imp > 1.2) { cr.squash = Math.min(1, imp / 4); if (Math.random() < .25) sfx.thud(.25); } }
+    cr.squash = damp(cr.squash, 0, 8, dt);
+    cr.g.position.copy(cr.pos); cr.g.quaternion.copy(hq); cr.g.rotateZ(Math.sin(time * 7 + cr.i * 2) * .35 * m.dz);   // dizzy: the whole body wobbles
+    cr.g.children[0].scale.set(cr.r * (1 + cr.squash * .3), cr.r * .9 * (1 - cr.squash * .3), cr.r * (1 + cr.squash * .3));
+    const it = items[cr.i + 1];
+    if (itemAt) { const w = head.localToWorld(itemAt); if (!it.g.visible) { it.pos.copy(cr.pos); it.vel.set(0, 0, 0); it.g.visible = true; }
+      const u = own && offer.phase === 'taken' ? smooth(Math.min(1, offer.t / .9)) : 0; w.lerp(camera.position, u * .25); it.g.scale.setScalar(1 + u * .5); it.m.opacity = it.em.opacity = 1 - u;
+      const kI = 90; it.vel.addScaledVector(w.sub(it.pos), kI * dt).multiplyScalar(Math.exp(-2 * Math.sqrt(kI) * .55 * dt)); it.pos.addScaledVector(it.vel, dt);
+      it.g.position.copy(it.pos).add(V(0, Math.sin(time * 23) * .004 * (1 + m.dz * 3), 0)); it.g.lookAt(camera.position); if (own && mood[cr.id].an > .45) it.g.rotateY(.5);
+      cr.hand.g.visible = true; cr.hand.set(cr.pos.clone().add(V(0, cr.r * .3, 0)), it.pos.clone().add(V(0, -.04, 0))); }
+    else { it.g.visible = false; cr.hand.g.visible = false; }
+    cr.arm.g.visible = cr.grabbing;
+    if (cr.grabbing) { const rim = lid.localToWorld(V(-.3 + cr.i * .28, -.08, .2)); cr.arm.set(cr.pos.clone().add(V(0, cr.r * .5, 0)), rim); cr.glareUntil = Math.max(cr.glareUntil, cr.holdUntil || time + .2); }
+    // gaze: context first
+    let look;
+    if (own && offer.phase === 'hold') look = mood[cr.id].an > .45 ? head.localToWorld(V(-1.5, H, -1)) : camera.position;   // sulking: looks away, still offers
+    else if (offer.phase === 'hold' && time < cr.lookOwner) look = crowd[offer.i - 1].pos;          // the losers stare at the winner
+    else if (time < cr.glareUntil) look = camera.position;                                       // staring at whoever did it
+    else if (HS.dist > .3) look = cr === grabber ? lid.position : crowd[(cr.i + 1) % 3].pos; // busy holding on / checking the other
+    else if (drag && HS.speed < 1.2) look = raypoint();                                     // slow exploring: follow the hand
+    else if (act && act.hasSheet) look = sheet.position;                                     // everyone watches the sheet go out
+    else look = cr.i === 2 && writing ? V(.2, 0, .8) : camera.position;                     // the small one watches the pencil
+    faceEyes(cr.eyes, m, look, time < cr.glareUntil);
+  });
+  // ---- discovery: the small one behind the back wall
+  const back = head.worldToLocal(camera.position.clone()).z < -.3;
+  const h = hider;
+  if (h.state === 'busy') { h.hands.set(V(-.03, 0, .05), V(.04 + Math.sin(time * 9) * .02, .02, .07)); h.g.position.y = H * .42 + Math.abs(Math.sin(time * 4.5)) * .01;
+    if (back) { h.seen += dt; if (h.seen > .45) { disturb('hider', 'caught', .5); h.state = 'caught'; h.t = 0; sfx.pip(); say('เจอตัวหลังกล่อง', 'มันกำลังทำอะไรอยู่ แล้วรู้ตัวว่าถูกเห็น'); } } else h.seen = 0; }
+  else if (h.state === 'caught') { h.t += dt; if (h.t > 1.3) { h.state = 'hide'; h.t = 0; sfx.rustle(); } }
+  else if (h.state === 'hide') { h.t += dt; h.g.position.x = lerp(.18, -.34, Math.min(1, h.t / .5)); h.g.position.y = lerp(H * .42, H * .1, Math.min(1, h.t / .5)); if (!back) { h.hidden += dt; if (h.hidden > 5) { h.state = 'busy'; h.g.position.set(.18, H * .42, -D / 2 - .06); h.hidden = 0; } } else h.hidden = 0; }
+  faceEyes(h.eyes, mood.hider, h.state === 'busy' ? h.g.localToWorld(V(.04, .02, .3)) : camera.position, h.state === 'caught');
+
+  // ---- the Maker's body: calm, keeps writing, compensates the head
+  const pelvis = V(0, .42, -.05).addScaledVector(sway, .3), chest = V(-HS.roll * .08, .84, .22 + HS.pitch * .03).add(sway);
+  body.torso.set(pelvis, chest, .16);
+  for (const s of [-1, 1]) { const hip = V(.14 * s, .42, -.05), knee = V(.3 * s, .6, .32), ankle = V(.23 * s, .08, .02), toe = V(.23 * s, .05, .17);
+    body[s < 0 ? 'legL1' : 'legR1'].set(hip, knee); body[s < 0 ? 'legL2' : 'legR2'].set(knee, ankle); body[s < 0 ? 'footL' : 'footR'].set(ankle, toe); }
+  const shR = V(.22, .86, .26).add(V(-HS.roll * .06, 0, 0)).add(sway), shL = V(-.22, .86, .26).add(sway);
+  const penBase = V(.1 + Math.sin(time * .9) * .12, .004, .7 + Math.sin(time * .37) * .06);
+  const jit = 1 + mz.an * .8;                                                                                            // annoyed: scribbles harder
+  const tip = writing ? penBase.clone().add(V(Math.sin(time * 11 * jit) * .012, 0, Math.cos(time * 8 * jit) * .008)) : penBase.clone().add(V(0, .05, 0));
+  const restR = tip.clone().add(V(-.02, .14, -.05));
+  let hR = restR.clone(), hL = KNEE_L.clone();
+  if (!act) {
+    pencil.set(tip, tip.clone().add(V(-.03, .17, -.06)));
+    if (writing) { const [px, py] = toPaper(tip); if (lastInk) { pctx.strokeStyle = `rgba(40,34,50,${.55 + mz.an * .35})`; pctx.lineWidth = 2 + mz.an * 1.5; pctx.beginPath(); pctx.moveTo(...lastInk); pctx.lineTo(px, py); pctx.stroke(); paperTex.needsUpdate = true; } lastInk = [px, py]; } else lastInk = null;
+    // left hand: rests on the knee (drums on it when annoyed); reaches up to straighten the head when fixing
+    if (mz.an > .3 && !fixing) hL.y += Math.max(0, Math.sin(time * 16)) * .025 * mz.an;
+    if (fixing) { const rel = .6 + fixing.dur + .1, reach = Math.min(1, fixing.t / .5) * (fixing.t > rel ? Math.max(0, 1 - (fixing.t - rel) / .4) : 1); hL.lerp(head.localToWorld(V(-W / 2 - .02, H * .5, .05)), reach); }
+  } else {
+    lastInk = null; pencil.set(V(.28, .012, .58), V(.44, .012, .66));                                                   // pencil put down on the paper
+    const ph = act.phase, u = clamp(act.pt / PH[ph], 0, 1), e = smooth(u), q = Math.min(1, u * 3);
+    const flailS = shR.clone().add(V(.3, .32 + Math.sin(time * 13) * .05, .22)), flailR = shR.clone().add(V(.28, .22 + Math.sin(time * 13) * .05, .12)), flailL = shL.clone().add(V(-.32, .18 + Math.sin(time * 11 + 1) * .05, .05));
+    const tabW = dividers[0].tab.getWorldPosition(V());
+    const noise = V(Math.sin(time * 37), Math.sin(time * 29 + 1), Math.sin(time * 41 + 2)).multiplyScalar(.018 * (1 + mz.dz + mz.an * .5));
+    if (ph === 'shake') act.shake = lerp(1, .5, e); else if (ph === 'steady') act.shake = lerp(.5, .07, e); else if (ph === 'hold') act.shake = .07;
+    let S = act.S.clone();
+    if (act.hasSheet) {
+      if (ph === 'lose') S = act.fromS.clone().lerp(flailS, q);
+      else if (ph === 'recover') S = act.fromS.clone().lerp(OFFER, e);
+      else if (ph === 'offer') S = tabW.clone().lerp(OFFER, e).add(V(0, Math.sin(Math.PI * u) * .12, 0));
+      else if (ph === 'back') S = act.fromS.clone().lerp(tabW, e);
+      else if (ph === 'taken') S = act.fromS.clone().lerp(OFFER.clone().add(camera.position.clone().sub(OFFER).setLength(.9)), e);
+      else S = OFFER.clone().add(V(0, Math.sin(time * 1.6) * .006, 0)).addScaledVector(noise, act.shake);
+      sheet.position.copy(S); sheet.lookAt(camera.position); sheet.rotateZ(noise.x * 3 * act.shake); sheet.updateMatrixWorld(true);
+      if (ph === 'taken') { sheet.scale.setScalar(1 + e * .4); sheetMat.opacity = sheetEdge.opacity = 1 - e; }
+    }
+    const gripR = act.hasSheet ? sheet.localToWorld(V(-.1, -.13, .012)) : null, gripL = act.hasSheet ? sheet.localToWorld(V(.1, -.13, .012)) : null;
+    if (ph === 'lose') { hR = act.hasSheet ? gripR : act.fromR.clone().lerp(flailR, q); hL = act.fromL.clone().lerp(flailL, q); }
+    else if (ph === 'recover') { hR = act.hasSheet ? gripR : act.fromR.clone().lerp(restR, e); hL = act.fromL.clone().lerp(KNEE_L, e); }
+    else if (ph === 'reach') { hR = act.fromR.clone().lerp(tabW, e); hL = KNEE_L.clone(); }
+    else if (ph === 'offer' || ph === 'shake') { hR = gripR; hL = act.fromL.clone().lerp(KNEE_L, e); }
+    else if (ph === 'steady') { hR = gripR; hL = act.fromL.clone().lerp(gripL, e); }
+    else if (ph === 'hold') { hR = gripR; hL = gripL; }
+    else if (ph === 'back') { hR = gripR; hL = act.fromL.clone().lerp(KNEE_L, Math.min(1, u * 2)); }
+    else if (ph === 'taken') { hR = act.fromR.clone().lerp(restR, e); hL = act.fromL.clone().lerp(KNEE_L, e); }
+    act.hR = hR.clone(); act.hL = hL.clone(); act.S = S;
+  }
+  if (A.pencil) A.pencil.gain.setTargetAtTime(writing && !act ? .05 : 0, A.ctx.currentTime, .03);
+  const eR = ik(shR, hR, .5, .5, V(.75, .9, .1)); body.armR1.set(shR, eR); body.armR2.set(eR, hR); body.handR.set(hR, hR.clone().add(V(0, -.02, .03)), .06);
+  const eL = ik(shL, hL, .5, .5, V(-.85, .7, -.1)); body.armL1.set(shL, eL); body.armL2.set(eL, hL); body.handL.set(hL, hL.clone().add(V(0, .02, .03)), .06);
+  lastHR.copy(hR); lastHL.copy(hL);
+
+  // hud
+  $('mSpeed').style.width = Math.min(100, HS.speed / 5 * 100) + '%'; $('mDz').style.width = mz.dz * 100 + '%'; $('mAn').style.width = mz.an * 100 + '%';
+  if (time - eventT > 4 && !drag && !fixing && !act && eventText !== 'WORKING') { if (HS.dist < .05 && HS.speed < .1) say(writing ? 'WORKING' : 'รอ', writing ? 'Maker กลับไปเขียนต่อ' : 'แรงจบแล้ว แต่ยังไม่อยากเขียนต่อ'); }
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').hidden = true; }
+}
+function squeezeCrowd() { crowd.forEach(c => { c.squash = 1; c.vel.y -= 1.5; disturb(c.id, 'squashed'); }); sfx.thud(.6); setTimeout(() => sfx.mutter(1), 150);
+  say('บีบลงไปแล้ว', 'ตัวข้างในยอมมุดลงกล่อง ฝาปิดลงได้แค่ขอบกล่อง ไม่ทะลุลงไป'); }
+function releaseCrowd() { crowd.forEach(c => { c.vel.y += 2.2; c.squash = .6; c.glareUntil = time + 1.8 * (1 + mood[c.id].an); }); sfx.rustle();
+  say('เด้งกลับขึ้นมา', 'ปล่อยฝาแล้ว ตัวข้างในโผล่กลับขึ้นมาพร้อมจ้องค้อน'); }
+function pickGrabber() {
+  const last = [...mem].reverse().find(m => m.what === 'held-lid' || m.what === 'pre-grab');
+  let c = last ? crowd[+last.who.slice(1)] : crowd[0];
+  if (mood[c.id].dz > .7) c = crowd.filter(x => x !== c).sort((a, b) => mood[a.id].dz - mood[b.id].dz)[0];   // too dizzy to hold on: someone else steps in
+  return c;
+}
+function faceEyes(e, m, look, glare) {
+  const dir = e.g.worldToLocal(look.clone()).normalize(), s = e.r * .34;
+  e.balls.forEach((b, k) => { b.scale.set(s, s * (1 - m.an * .5), s);                                                   // annoyed: eyes narrow
+    const p = e.pupils[k], a = time * 11 + k * Math.PI;                                                                   // dizzy: pupils roll in opposite circles
+    p.position.copy(dir).multiplyScalar(.62 * (1 - m.dz * .7)); p.position.x += Math.cos(a) * .42 * m.dz; p.position.y += Math.sin(a) * .42 * m.dz - .2 * m.an; });
+  e.brows.forEach(({ b, s: sg }) => { b.visible = m.an > .12; b.rotation.z = sg * m.an * .7; b.position.y = e.r * (.67 - .08 * m.an); });
+  e.g.scale.setScalar(glare ? 1.12 : 1);
+}
+function onReverse() { if (time - revAt < .5) return; revAt = time;
+  for (const id in mood) { mood[id].dz = Math.min(1, mood[id].dz + .35 * SENS[id]); disturb(id, 'reversed', .6); }
+  if (!act) say('กลับทิศเร็ว', 'ของข้างในชนกัน ตัวหนึ่งหันไปมองอีกตัว แล้วจ้องคนหมุน');
+  const [a, b] = [crowd[1], crowd[2]]; const d = b.pos.clone().sub(a.pos).normalize(); a.vel.addScaledVector(d, 2.2); b.vel.addScaledVector(d, -2.2); a.squash = b.squash = .8;
+  sfx.thud(.6); setTimeout(() => sfx.mutter(1), 180); a.glareUntil = time + (1.6 + Math.random() * .8) * (1 + mood.m1.an); b.glareUntil = time + .9 * (1 + mood.m2.an); }
+let lastRay = V(); function raypoint() { return lastRay; }
+cv.addEventListener('pointermove', e => { const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, camera); lastRay = ray.ray.at(3.5, V()); });
+
+// ---------------------------------------------------------------- UI
+function segUI(id, opts, key, on) { const el = $(id); for (const [v, l] of opts) { const b = document.createElement('button'); b.type = 'button'; b.textContent = l; b.setAttribute('aria-pressed', String(P[key] === v));
+  b.onclick = () => { P[key] = v; el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); on && on(); }; el.append(b); } }
+segUI('lidMode', [['auto', 'ลอยเมื่อเข้าใกล้'], ['float', 'ลอยตลอด'], ['closed', 'ปิดตลอด']], 'lidMode');
+P.headScale = 1.22; { const el = $('headScale'), out = el.nextElementSibling, u = () => { P.headScale = +el.value; out.textContent = (+el.value).toFixed(2); }; u(); el.addEventListener('input', u); }
+P.view = 'plate'; segUI('view', [['plate', 'ภาพจริง'], ['ref', 'ทับภาพมาสเตอร์ 50%']], 'view', () => { $('ref').hidden = P.view !== 'ref'; });
+segUI('recenter', [['snap', 'สะบัดกลับ (อย่ามายุ่ง)'], ['stay', 'ค้างมุมไว้']], 'recenter');
+segUI('snd', [[true, 'เปิด'], [false, 'ปิด']], 'sound', () => { if (A.out) A.out.gain.value = P.sound ? .6 : 0; });
+for (const id of ['kHead', 'kLid', 'kIn', 'kStart', 'kIdle', 'kDz', 'kAn']) { const el = $(id), out = el.nextElementSibling, u = () => { P[id] = +el.value; out.textContent = el.value; }; u(); el.addEventListener('input', u); }
+$('reset').onclick = () => { Object.assign(HS, { yaw: 0, pitch: 0, roll: 0, wy: 0, wp: 0, wr: 0, dist: 0 }); fixing = null; lidS.pull.set(0, 0, 0); writing = true; if (act) endAct();
+  Object.assign(bal, { x: 0, z: 0, vx: 0, vz: 0 }); for (const m of Object.values(mood)) Object.assign(m, { dz: 0, an: 0 }); say('WORKING', 'รีเซ็ตท่าและอารมณ์แล้ว ความจำยังอยู่'); };
+$('forget').onclick = () => { mem.length = 0; memDirty = true; say('ลืมหมดแล้ว', 'ความจำว่าง ใครจับฝาครั้งหน้าจะเริ่มจากก้อนดำ'); };
+const moodEls = {};
+for (const [id, name] of Object.entries(WHO)) { const row = document.createElement('div'); row.className = 'mrow';
+  row.innerHTML = `<span>${name}</span><span class="bars"><span class="bar z" title="มึน"><i></i></span><span class="bar d" title="หงุดหงิด"><i></i></span></span><span class="doing"></span>`;
+  $('moods').append(row); const [z, d] = row.querySelectorAll('i'); moodEls[id] = { z, d, doing: row.querySelector('.doing'), last: '' }; }
+function panels() {
+  for (const id in moodEls) { const el = moodEls[id], m = mood[id]; el.z.style.width = m.dz * 100 + '%'; el.d.style.width = m.an * 100 + '%'; const t = DOING[doing(id)]; if (t !== el.last) { el.doing.textContent = t; el.last = t; } }
+  if (!memDirty) return; memDirty = false; const ul = $('mem'); ul.textContent = '';
+  if (!mem.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'ยังไม่มีเหตุการณ์ ลองจับหัวหรือดึงฝาดู'; ul.append(li); return; }
+  for (const e of mem.slice(-10).reverse()) { const li = document.createElement('li'); li.innerHTML = `<time>${e.t.toFixed(1)}s</time><span>${WHO[e.who]} · ${WHAT[e.what] || e.what} <span class="w">ขณะ${DOING[e.whileDoing] || e.whileDoing}</span></span>`; ul.append(li); }
+}
+
+// ---- the drawn body in layers (tools/make_parts.py): a clean base plate, then the right arm with its pencil, the left hand
+// and the sneaker as separate sheets. Each sheet bends (like liquify): the end in the sleeve or cuff stays put, the far end moves.
+const plateScene = new THREE.Scene(), plateCam = new THREE.OrthographicCamera(0, 2000, 0, -1125, -10, 10);
+const texLoad = n => { const t = new THREE.TextureLoader().load('art/parts/' + n + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+function layerSheet(tex, x, y, w, h, sx, sy, z) {                                               // a bendable picture, placed in picture pixels
+  const g = new THREE.PlaneGeometry(w, h, sx, sy); g.translate(x + w / 2, -(y + h / 2), 0);
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false })); m.renderOrder = z; plateScene.add(m);
+  return { g, base: g.attributes.position.array.slice() };
+}
+const PARTS = { right_arm: [502, 545, 365, 208], left_hand: [946, 525, 193, 185], sneaker: [974, 875, 287, 190] };   // art/parts/parts.json
+const baseSheet = layerSheet(texLoad('base_plate_cut'), 0, 0, 2000, 1125, 100, 56, 0);
+// pencil marks: a small canvas over the paper, written by the pencil tip
+const marksCv = document.createElement('canvas'); marksCv.width = 480; marksCv.height = 240; const mk = marksCv.getContext('2d');
+const MARKS = { x: 700, y: 640 };                                                          // where the canvas sits in the picture
+const marksTex = new THREE.CanvasTexture(marksCv); marksTex.colorSpace = THREE.SRGBColorSpace;
+layerSheet(marksTex, MARKS.x, MARKS.y, 480, 240, 1, 1, 1);
+const arm = layerSheet(texLoad('right_arm'), ...PARTS.right_arm, 36, 20, 2);
+const lhand = layerSheet(texLoad('left_hand'), ...PARTS.left_hand, 20, 20, 3);
+const shoe = layerSheet(texLoad('sneaker'), ...PARTS.sneaker, 36, 24, 4);
+const smooth01 = u => { u = Math.min(1, Math.max(0, u)); return u * u * (3 - 2 * u); };
+const fall = (x, y, cx, cy, r) => { const d = Math.hypot(x - cx, y - cy) / r; return d >= 1 ? 0 : (1 - d * d) ** 2; };
+function bend(s, fn) { const p = s.g.attributes.position.array, b = s.base;
+  for (let i = 0; i < p.length; i += 3) { const x = b[i], y = -b[i + 1], o = fn(x, y); p[i] = b[i] + o[0]; p[i + 1] = b[i + 1] - o[1]; }
+  s.g.attributes.position.needsUpdate = true; }
+const rot = (x, y, px, py, a, w) => { const g = a * w, ox = x - px, oy = y - py; return [ox * Math.cos(g) - oy * Math.sin(g) - ox, ox * Math.sin(g) + oy * Math.cos(g) - oy]; };
+
+const micro = { writeEnv: 0, nod: 0, lp: 0, line: 0, ret: 0, lastTip: null, fade: 0, tapAt: 3, footAt: 5, lace: 0, laceV: 0 };
+function animateBody(t, dt) {                                                               // positions in picture pixels (2000 x 1125)
+  const frozen = window.__freeze;
+  micro.writeEnv = damp(micro.writeEnv, writing && !act && !frozen ? 1 : 0, 4, dt);
+  // writing: the hand crosses a short line in small letter-loops, lifts, returns, drops a line; after 4 lines the old marks fade
+  const on = .5 + .5 * Math.sin(t * .9) > .2 ? 1 : 0;                                       // short thinking pauses
+  let hx = 0, hy = 0, down = false;
+  if (micro.writeEnv > .5 && on) {
+    if (micro.ret > 0) { micro.ret -= dt; hx = -8 + 58 * (micro.ret / .45); hy = -6; }
+    else { micro.lp += dt / 3.6; hx = -8 + 58 * micro.lp + 2.4 * Math.sin(t * 8.5); hy = 3 * Math.sin(t * 13 + 1); down = true;
+      if (micro.lp >= 1) { micro.lp = 0; micro.ret = .45; micro.line++; if (micro.line % 4 === 0) micro.fade = 1; } }
+    hy += (micro.line % 4) * 9 - 27 - .17 * hx;                                              // lines go down the page, along its slant
+  } else { hy = -4 * micro.writeEnv; }
+  micro.hx = damp(micro.hx || 0, hx, 14, dt); micro.hy = damp(micro.hy || 0, hy, 14, dt);
+  bend(arm, (x, y) => { const w = smooth01((x - 560) / 190) ** 1.3; return [micro.hx * w, micro.hy * w]; });   // sleeve end still, hand moves
+  // pencil marks under the tip
+  const tip = [852 + micro.hx - MARKS.x, 738 + micro.hy - MARKS.y];
+  if (down && !frozen) { if (micro.lastTip) { mk.strokeStyle = 'rgba(35,32,40,.9)'; mk.lineWidth = 3.2; mk.lineCap = 'round'; mk.beginPath(); mk.moveTo(...micro.lastTip); mk.lineTo(...tip); mk.stroke(); marksTex.needsUpdate = true; } micro.lastTip = tip; } else micro.lastTip = null;
+  if (micro.fade > 0) { micro.fade -= dt; mk.globalCompositeOperation = 'destination-out'; mk.fillStyle = 'rgba(0,0,0,.08)'; mk.fillRect(0, 0, 480, 240); mk.globalCompositeOperation = 'source-over'; marksTex.needsUpdate = true; }
+  // the other hand taps now and then (a double tap)
+  if (t > micro.tapAt + 1) micro.tapAt = t + 3 + Math.random() * 4;
+  const tu = (t - micro.tapAt) / .5, tap = frozen || tu < 0 || tu > 1 ? 0 : Math.max(0, Math.sin(tu * Math.PI * 2)) * 6;
+  bend(lhand, (x, y) => { const w = smooth01((y - 575) / 60) * smooth01((x - 990) / 60); return [0, -tap * w]; });
+  // the foot wiggles now and then; the lace loops swing a beat behind it
+  if (t > micro.footAt + 1.6) micro.footAt = t + 4 + Math.random() * 5;
+  const fu = (t - micro.footAt) / 1.4, foot = frozen || fu < 0 || fu > 1 ? 0 : .07 * Math.sin(fu * Math.PI * 7) * Math.sin(fu * Math.PI);
+  micro.laceV += ((foot - micro.lace) * 90 - micro.laceV * 7) * dt; micro.lace += micro.laceV * dt;
+  bend(shoe, (x, y) => { const w = smooth01((x - 1000) / 40), a = rot(x, y, 1012, 955, foot, w), l = fall(x, y, 1032, 1008, 60);
+    if (!l) return a; const b = rot(x, y, 1045, 952, (micro.lace - foot) * 1.6, l); return [a[0] + b[0], a[1] + b[1]]; });
+  // breathing: the chest rises a little
+  const br = frozen ? 0 : Math.sin(t * 1.15);
+  bend(baseSheet, (x, y) => [0, -1.4 * br * fall(x, y, 760, 540, 230)]);
+  // the head nods along with the writing: one slow, calm nod
+  micro.nod = damp(micro.nod, frozen ? 0 : micro.writeEnv * (on ? 1 : .4), 2, dt);
+  BOB.p = micro.nod * .018 * Math.sin(t * 1.6); BOB.r = micro.nod * .008 * Math.sin(t * .8 + 1); BOB.y = frozen ? 0 : micro.writeEnv * .012 * Math.sin(t * .35);
+}
+document.querySelectorAll('#menu button').forEach(b => { const i = +b.dataset.i;                   // the menu row: always there, always works
+  b.addEventListener('pointerenter', () => { if (i > 0) hoverTab = i; }); b.addEventListener('pointerleave', () => { if (hoverTab === i) hoverTab = -1; });
+  b.addEventListener('click', () => { audioStart(); if (i === 0) startWork(); else if (offer.i === i && offer.phase === 'hold') openItem(i); else startOffer(i, true); }); });
+layout();
+renderer.autoClear = false;
+renderer.setAnimationLoop(() => { const dt = Math.min(clock.getDelta(), 1 / 30); animateBody(time, dt); step(dt); panels();
+  renderer.clear(); renderer.render(plateScene, plateCam); renderer.clearDepth(); renderer.render(scene, camera); });
+
+window.__f = { HS, P, crowd, lidS, hider, mood, mem, WIN, inWin, step, setCam, startWork, takeSheet, panels, openItem, items, lidY: () => head.worldToLocal(lidS.pos.clone()).y, get offer() { return offer; }, hover(i) { hoverTab = i; }, get act() { return act; }, get grabber() { return grabber && grabber.id; },
+  get ev() { return eventText; }, get why() { return eventWhy; }, writing: () => writing, fixing: () => !!fixing, dbg: () => [+(time - lastInput).toFixed(1), +HS.speed.toFixed(2)],
+  scr(x, y, z, obj) { const o = obj === 'lid' ? lid : obj === 'sheet' ? sheet : obj === 'world' ? null : head, v = (o ? o.localToWorld(V(x, y, z)) : V(x, y, z)).project(camera), r = cv.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; } };
+</script>
