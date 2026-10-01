@@ -77,7 +77,7 @@ input[type=range]{width:100%;accent-color:var(--ink)}
 <div class="app">
   <div class="stage" id="stage">
     <div class="frame" id="frame">
-      <img id="ref" src="art/ref_composition_v3.png" alt="" hidden>
+      <img id="ref" src="art/ref_composition_v3.webp" alt="" hidden>
       <canvas id="cv" aria-label="Maker นั่งเขียนงาน หัวเป็นกล่องเอกสาร ลากเพื่อหมุนหัว ลากฝาได้"></canvas>
     </div>
     <nav class="menu" id="menu" aria-label="เมนู"><button type="button" data-i="0">WORK</button><button type="button" data-i="1">WORLDS</button><button type="button" data-i="2">EDITIONS</button><button type="button" data-i="3">CONTACT</button></nav>
@@ -88,7 +88,7 @@ input[type=range]{width:100%;accent-color:var(--ink)}
     </div>
     <div class="hint">ลากกล่อง = หมุนหัว · ลากฝา = ดึงฝา · ปุ่มแถวล่าง = เมนู</div>
     <div class="toast" id="toast" hidden></div>
-    <div class="stamp" id="stamp">อัปเดต 01/10 09:27</div>
+    <div class="stamp" id="stamp">อัปเดต 01/10 11:25</div>
   </div>
   <aside>
     <div><h1>Maker บนภาพจริง</h1><p class="sub">ตัว โต๊ะ แก้ว และลายบนกล่องกับฝา มาจาก Master Final ของ Aoh กล่องกับฝาเป็นสามมิติจริงที่แปะหน้ากล่องซึ่งคลี่ออกมาจากภาพ แท็บบนกล่องเอาออกแล้ว เมนูอยู่แถวล่างแทน ก้อนข้างในกับของที่ยื่นยังเป็นของชั่วคราว พฤติกรรมทั้งหมดเหมือน Behavior v2</p></div>
@@ -251,7 +251,7 @@ const lid = new THREE.Group(); scene.add(lid);
   lp(LW, LIDH, lt, 0, -LIDH / 2, LD / 2); lp(LW, LIDH, lt, 0, -LIDH / 2, -LD / 2); lp(lt, LIDH, LD, LW / 2, -LIDH / 2, 0); lp(lt, LIDH, LD, -LW / 2, -LIDH / 2, 0); }
 const VIEW = { x0: -1, x1: 1, y0: -1, y1: 1 };                   // visible part of the canvas in screen units (a page may narrow it)
 // the real art on the head: faces flattened from Aoh's box-only image (tools/unwarp_box.py)
-const texL = new THREE.TextureLoader(), T = n => { const t = texL.load('art/tex/' + n + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return new THREE.MeshBasicMaterial({ map: t, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }); };
+const texL = new THREE.TextureLoader(), T = n => { const t = texL.load('art/tex/' + n + '.webp'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return new THREE.MeshBasicMaterial({ map: t, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }); };
 const RIM = new THREE.MeshBasicMaterial({ color: 0xEDEDEA, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 const NONE = new THREE.MeshBasicMaterial({ visible: false });
 // the walls overlap at the corners, so a wall's end face lies in the same plane as its neighbour's outside face;
@@ -777,7 +777,7 @@ function panels() {
 // ---- the drawn body in layers (tools/make_parts.py): a clean base plate, then the right arm with its pencil, the left hand
 // and the sneaker as separate sheets. Each sheet bends (like liquify): the end in the sleeve or cuff stays put, the far end moves.
 const plateScene = new THREE.Scene(), plateCam = new THREE.OrthographicCamera(0, 2000, 0, -1125, -10, 10);
-const texLoad = n => { const t = new THREE.TextureLoader().load('art/parts/' + n + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+const texLoad = n => { const t = new THREE.TextureLoader().load('art/parts/' + n + '.webp'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
 function layerSheet(tex, x, y, w, h, sx, sy, z) {                                               // a bendable picture, placed in picture pixels
   const g = new THREE.PlaneGeometry(w, h, sx, sy); g.translate(x + w / 2, -(y + h / 2), 0);
   const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false })); m.renderOrder = z; plateScene.add(m);
