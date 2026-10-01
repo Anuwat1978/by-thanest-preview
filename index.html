@@ -88,7 +88,7 @@ input[type=range]{width:100%;accent-color:var(--ink)}
     </div>
     <div class="hint">ลากกล่อง = หมุนหัว · ลากฝา = ดึงฝา · ปุ่มแถวล่าง = เมนู</div>
     <div class="toast" id="toast" hidden></div>
-    <div class="stamp" id="stamp">อัปเดต 01/10 11:55</div>
+    <div class="stamp" id="stamp">อัปเดต 01/10 17:22</div>
   </div>
   <aside>
     <div><h1>Maker บนภาพจริง</h1><p class="sub">ตัว โต๊ะ แก้ว และลายบนกล่องกับฝา มาจาก Master Final ของ Aoh กล่องกับฝาเป็นสามมิติจริงที่แปะหน้ากล่องซึ่งคลี่ออกมาจากภาพ แท็บบนกล่องเอาออกแล้ว เมนูอยู่แถวล่างแทน ก้อนข้างในกับของที่ยื่นยังเป็นของชั่วคราว พฤติกรรมทั้งหมดเหมือน Behavior v2</p></div>
@@ -887,7 +887,6 @@ const intro = { phase:'loading', elapsed:0, active:true, ready:false, landed:fal
 const loaderEl=$('intro-loader'), cardEl=$('intro-card'), skipEl=$('intro-skip');
 const introFront=new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2,0,0));
 const introOriginal=new Map(scene.children.map(o=>[o,o.visible]));
-let returning=false;try{returning=localStorage.getItem('by-thanest-intro-seen')==='1';}catch{}
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const introEase=u=>{u=clamp(u,0,1);return u*u*(3-2*u);};
 const introPop=u=>{u=clamp(u,0,1);return 1+2.5*(u-1)**3+1.5*(u-1)**2;};
@@ -898,7 +897,7 @@ function finishIntro(){
  lidS.pos.copy(head.localToWorld(V(0,H+.03,0)));lidS.vel.set(0,0,0);lidS.wob.set(0,0,0);lidS.wobV.set(0,0,0);lidS.pull.set(0,0,0);lidS.lift=0;
  lid.position.copy(lidS.pos);lid.quaternion.copy(hq);lid.scale.setScalar(P.headScale);
  intro.active=false;intro.phase='working';loaderEl.hidden=true;skipEl.hidden=false;skipEl.textContent='↻';skipEl.setAttribute('aria-label','เล่นช่วงเปิดอีกครั้ง');skipEl.title='เล่นช่วงเปิดอีกครั้ง';cv.style.pointerEvents='';
- micro.lastTip=null;try{localStorage.setItem('by-thanest-intro-seen','1');}catch{}
+ micro.lastTip=null;
 }
 skipEl.addEventListener('click',()=>{
  if(intro.active){finishIntro();return;}
@@ -920,7 +919,7 @@ function animateIntro(dt){
   return;
  }
  if(!window.__freeze)intro.elapsed+=dt;
- if(reduced||(returning&&!intro.replay)){finishIntro();return;}
+ if(reduced){finishIntro();return;}
  const t=intro.elapsed,hit=intro.impact;
  restoreIntroScene();
  for(const o of scene.children)o.visible=false;
