@@ -88,7 +88,7 @@ input[type=range]{width:100%;accent-color:var(--ink)}
     </div>
     <div class="hint">ลากกล่อง = หมุนหัว · ลากฝา = ดึงฝา · ปุ่มแถวล่าง = เมนู</div>
     <div class="toast" id="toast" hidden></div>
-    <div class="stamp" id="stamp">อัปเดต 01/10 17:22</div>
+    <div class="stamp" id="stamp">อัปเดต 02/10 17:40</div>
   </div>
   <aside>
     <div><h1>Maker บนภาพจริง</h1><p class="sub">ตัว โต๊ะ แก้ว และลายบนกล่องกับฝา มาจาก Master Final ของ Aoh กล่องกับฝาเป็นสามมิติจริงที่แปะหน้ากล่องซึ่งคลี่ออกมาจากภาพ แท็บบนกล่องเอาออกแล้ว เมนูอยู่แถวล่างแทน ก้อนข้างในกับของที่ยื่นยังเป็นของชั่วคราว พฤติกรรมทั้งหมดเหมือน Behavior v2</p></div>
@@ -181,6 +181,26 @@ setTimeout(()=>{if(!window.makerBoot.ready&&!window.makerBoot.failed)document.ge
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
+// Human-cause proof: one interruptible writing performance, no speculative world engine.
+const takes = { A: {hold:.24,lift:20}, B: {hold:.48,lift:30}, C: {hold:.76,lift:38} };
+function createPerformance(take='B') {
+ const s={phase:'write',quiet:0,lift:0,take,trace:[],tip:null,contact:false};
+ return {state:s, update(dt,{disturbed=false,blocked=false,frozen=false}={}) {
+  if(frozen)return s;
+  const previous=s.phase, direction=takes[s.take]||takes.B;
+  if(disturbed||blocked){s.quiet=0;s.phase='disturbed';}
+  else if(s.phase!=='write'){
+   s.quiet+=dt;
+   s.phase=s.quiet<direction.hold?'hold':s.lift>.3?'recover':'write';
+  }
+  const target=s.phase==='disturbed'||s.phase==='hold'?direction.lift:0;
+  s.lift+=(target-s.lift)*(1-Math.exp(-dt*(target?18:9)));
+  s.contact=s.phase==='write'&&s.lift<.3;
+  if(previous!==s.phase){s.trace.push({from:previous,to:s.phase});if(s.trace.length>40)s.trace.shift();}
+  return s;
+ }};
+}
+
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
@@ -821,7 +841,7 @@ const texLoad = n => { const t = new THREE.TextureLoader().load('art/parts/' + n
 function layerSheet(tex, x, y, w, h, sx, sy, z) {                                               // a bendable picture, placed in picture pixels
   const g = new THREE.PlaneGeometry(w, h, sx, sy); g.translate(x + w / 2, -(y + h / 2), 0);
   const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false })); m.renderOrder = z; plateScene.add(m);
-  return { g, base: g.attributes.position.array.slice() };
+  return { g, mesh:m, base: g.attributes.position.array.slice() };
 }
 const PARTS = { right_arm: [502, 545, 365, 208], left_hand: [946, 525, 193, 185], sneaker: [974, 875, 287, 190] };   // art/parts/parts.json
 const baseSheet = layerSheet(texLoad('base_plate_cut'), 0, 0, 2000, 1125, 100, 56, 0);
@@ -830,7 +850,34 @@ const marksCv = document.createElement('canvas'); marksCv.width = 480; marksCv.h
 const MARKS = { x: 700, y: 640 };                                                          // where the canvas sits in the picture
 const marksTex = new THREE.CanvasTexture(marksCv); marksTex.colorSpace = THREE.SRGBColorSpace;
 layerSheet(marksTex, MARKS.x, MARKS.y, 480, 240, 1, 1, 1);
-const arm = layerSheet(texLoad('right_arm'), ...PARTS.right_arm, 36, 20, 2);
+const handTexture = new THREE.TextureLoader().load('art/incoming/aoh-cutouts-2026-10-01/pencil-hand-write.webp');
+handTexture.colorSpace = THREE.SRGBColorSpace;
+// Aoh's pencil is already drawn into this sprite. Never add a second pencil.
+const arm = layerSheet(handTexture, 696, 542, 513*.32, 613*.32, 1, 1, 2);
+const armCv=document.createElement('canvas');armCv.width=500;armCv.height=300;
+const armCtx=armCv.getContext('2d'), armTex=new THREE.CanvasTexture(armCv);armTex.colorSpace=THREE.SRGBColorSpace;
+layerSheet(armTex,450,470,500,300,1,1,1.5);
+const performance=createPerformance('B');
+const m0={performance:performance.state, take:'B', wrist:[0,0],tip:[0,0],marks:0,
+ setTake(t){if(['A','B','C'].includes(t)){performance.state.take=t;this.take=t;}},
+ disturbFor:0, disturb(){this.disturbFor=.45;}};
+window.__m0=m0;
+if(new URLSearchParams(location.search).get('review')==='m0'){
+ const controls=document.createElement('div');controls.id='motion-takes';
+ controls.style.cssText='position:absolute;left:16px;top:40px;z-index:5;font:12px monospace;background:#fcfcfa;padding:10px;border:1px solid #bbb';
+ controls.innerHTML='<label>จังหวะ <select aria-label="จังหวะ M0"><option value="A">A · ตอบไว</option><option value="B" selected>B · เว้นจังหวะ (แนะนำ)</option><option value="C">C · ค้างนาน</option></select></label> <button type="button">ลองกวน</button>';
+ stage.appendChild(controls);controls.querySelector('select').onchange=e=>m0.setTake(e.target.value);
+ controls.querySelector('button').onclick=()=>{if(window.__intro?.active)return;m0.disturb();};
+}
+function drawWritingArm(hx,hy){
+ const c=armCtx;c.clearRect(0,0,500,300);
+ // Starts inside the sleeve opening and exits through its lower-right interior.
+ c.beginPath();c.moveTo(130,112);c.bezierCurveTo(82,159,70,207,130,219);c.bezierCurveTo(174,231,215+hx,230+hy,265+hx,226+hy);
+ c.lineCap='round';c.lineJoin='round';c.strokeStyle='#111';c.lineWidth=79;c.stroke();
+ const fill=c.createLinearGradient(0,135,0,255);fill.addColorStop(0,'#fbfbf8');fill.addColorStop(.55,'#efefec');fill.addColorStop(1,'#8b8b88');
+ c.strokeStyle=fill;c.lineWidth=67;c.stroke();armTex.needsUpdate=true;
+ m0.wrist=[715+hx,696+hy];
+}
 const lhand = layerSheet(texLoad('left_hand'), ...PARTS.left_hand, 20, 20, 3);
 const shoe = layerSheet(texLoad('sneaker'), ...PARTS.sneaker, 36, 24, 4);
 const smooth01 = u => { u = Math.min(1, Math.max(0, u)); return u * u * (3 - 2 * u); };
@@ -843,21 +890,26 @@ const rot = (x, y, px, py, a, w) => { const g = a * w, ox = x - px, oy = y - py;
 const micro = { writeEnv: 0, nod: 0, lp: 0, line: 0, ret: 0, lastTip: null, fade: 0, tapAt: 3, footAt: 5, lace: 0, laceV: 0 };
 function animateBody(t, dt) {                                                               // positions in picture pixels (2000 x 1125)
   const frozen = window.__freeze;
-  micro.writeEnv = damp(micro.writeEnv, writing && !act && !frozen ? 1 : 0, 4, dt);
+  if(!frozen)m0.disturbFor=Math.max(0,m0.disturbFor-dt);
+  const perf=performance.update(dt,{disturbed:!!drag||HS.speed>.7||m0.disturbFor>0,blocked:!!act||!!fixing,frozen});
+  micro.writeEnv = damp(micro.writeEnv, perf.contact && !frozen ? 1 : 0, 4, dt);
   // writing: the hand crosses a short line in small letter-loops, lifts, returns, drops a line; after 4 lines the old marks fade
   const on = .5 + .5 * Math.sin(t * .9) > .2 ? 1 : 0;                                       // short thinking pauses
   let hx = 0, hy = 0, down = false;
-  if (micro.writeEnv > .5 && on) {
+  if (perf.contact && micro.writeEnv > .5 && on && !frozen) {
     if (micro.ret > 0) { micro.ret -= dt; hx = -8 + 58 * (micro.ret / .45); hy = -6; }
     else { micro.lp += dt / 3.6; hx = -8 + 58 * micro.lp + 2.4 * Math.sin(t * 8.5); hy = 3 * Math.sin(t * 13 + 1); down = true;
       if (micro.lp >= 1) { micro.lp = 0; micro.ret = .45; micro.line++; if (micro.line % 4 === 0) micro.fade = 1; } }
     hy += (micro.line % 4) * 9 - 27 - .17 * hx;                                              // lines go down the page, along its slant
-  } else { hy = -4 * micro.writeEnv; }
+  } else { hx=micro.hx||0; hy=(micro.paperY||0)-(reduced?Math.min(5,perf.lift):perf.lift); }
+  if(perf.contact)micro.paperY=hy;
   micro.hx = damp(micro.hx || 0, hx, 14, dt); micro.hy = damp(micro.hy || 0, hy, 14, dt);
-  bend(arm, (x, y) => { const w = smooth01((x - 560) / 190) ** 1.3; return [micro.hx * w, micro.hy * w]; });   // sleeve end still, hand moves
+  bend(arm, () => [micro.hx,micro.hy]); // rigid hand/pencil preserves Aoh's drawing
+  drawWritingArm(micro.hx,micro.hy);
   // pencil marks under the tip
-  const tip = [852 + micro.hx - MARKS.x, 738 + micro.hy - MARKS.y];
-  if (down && !frozen) { if (micro.lastTip) { mk.strokeStyle = 'rgba(35,32,40,.9)'; mk.lineWidth = 3.2; mk.lineCap = 'round'; mk.beginPath(); mk.moveTo(...micro.lastTip); mk.lineTo(...tip); mk.stroke(); marksTex.needsUpdate = true; } micro.lastTip = tip; } else micro.lastTip = null;
+  m0.tip=[696+496*.32+micro.hx,542+606*.32+micro.hy];
+  const tip = [m0.tip[0]-MARKS.x,m0.tip[1]-MARKS.y];
+  if (down && !frozen && perf.contact) { if (micro.lastTip) { mk.strokeStyle = 'rgba(35,32,40,.9)'; mk.lineWidth = 3.2; mk.lineCap = 'round'; mk.beginPath(); mk.moveTo(...micro.lastTip); mk.lineTo(...tip); mk.stroke(); marksTex.needsUpdate = true;m0.marks++; } micro.lastTip = tip; } else micro.lastTip = null;
   if (micro.fade > 0) { micro.fade -= dt; mk.globalCompositeOperation = 'destination-out'; mk.fillStyle = 'rgba(0,0,0,.08)'; mk.fillRect(0, 0, 480, 240); mk.globalCompositeOperation = 'source-over'; marksTex.needsUpdate = true; }
   // the other hand taps now and then (a double tap)
   if (t > micro.tapAt + 1) micro.tapAt = t + 3 + Math.random() * 4;
