@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Pricing and Contact — rehearsal lab</title>
+<style>
+  body{margin:0;padding:16px;background:#f3efe6;color:#1b1b1b;font:14px/1.4 system-ui,sans-serif}
+  nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap} nav button{font:inherit;font-weight:600;border:1.5px solid #1b1b1b;background:#f3efe6;padding:6px 12px;cursor:pointer}
+  nav button[aria-current=page]{background:#1b1b1b;color:#f3efe6} .note{color:#6b665c;font-size:12px}
+</style>
+</head>
+<body>
+<p class="note">Rehearsal lab · Blueprint v1.1 §4.6 · modules <code>sets/pricing.js</code>, <code>sets/contact.js</code> · add <code>?from=KHWAN</code> to see the opt-in chip</p>
+<nav><button data-go="pricing">SERVICES &amp; PRICING</button><button data-go="contact">CONTACT</button></nav>
+<main id="set"></main>
+<script type="module">
+  import * as pricing from './sets/pricing.js'; import * as contact from './sets/contact.js';
+  const el = document.getElementById('set'), from = new URLSearchParams(location.search).get('from');
+  let cur = null;
+  function go(name, extra = {}) {
+    cur?.unmount(); document.querySelectorAll('nav button').forEach(b => b.removeAttribute('aria-current'));
+    document.querySelector(`nav [data-go=${name}]`).setAttribute('aria-current', 'page');
+    cur = name === 'pricing' ? pricing.mount(el, { onStartBrief: x => go('contact', x) }) : contact.mount(el, { interest: from, ...extra });
+    window.__set = cur; window.__name = name;
+  }
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.go));
+  go(location.hash === '#contact' ? 'contact' : 'pricing');
+</script>
+</body>
+</html>

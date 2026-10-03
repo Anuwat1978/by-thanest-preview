@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Coffee corner — rehearsal lab</title>
+<style>
+  body{margin:0;padding:16px;background:#f3efe6;color:#1b1b1b;font:14px/1.4 system-ui,sans-serif}
+  header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  h1{font-size:16px;margin:0} .note{color:#6b665c;font-size:12px}
+  .bind{margin-top:12px;color:#6b665c;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>COFFEE CORNER + STUDIO SIGNALS — rehearsal lab (Round 2, stand-ins)</h1>
+  <span class="note">Blueprint v1.1 §4.2 + D2 · not art direction · real payments: TEST MODE · module: <code>sets/coffee.js</code></span>
+</header>
+<div id="set"></div>
+<p class="bind">Bindings kept by the journey (persist across sets): <code id="b">{}</code></p>
+<script type="module">
+  import { mount } from './sets/coffee.js';
+  const b = document.getElementById('b');
+  const set = mount(document.getElementById('set'), {
+    reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    onBindings(x) { b.textContent = JSON.stringify(x); },
+  });
+  window.__coffee = set;
+</script>
+</body>
+</html>

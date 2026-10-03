@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Film to Making — rehearsal lab</title>
+<style>
+  body{margin:0;padding:16px;background:#f3efe6;color:#1b1b1b;font:14px/1.4 system-ui,sans-serif}.note{color:#6b665c;font-size:12px}
+  nav{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap} nav button{font:inherit;font-weight:600;border:1.5px solid #1b1b1b;background:#f3efe6;padding:6px 12px;cursor:pointer}
+  nav button[aria-current=page]{background:#1b1b1b;color:#f3efe6} #exit{color:#b0461f;font-weight:600}
+</style>
+</head>
+<body>
+<p class="note">Rehearsal lab · Blueprint v1.1 §4.5 · Film → Making share session records in memory (the skeleton will own this) · stand-ins</p>
+<nav><button data-go="film">FILM</button><button data-go="making">MAKING</button></nav>
+<main id="set"></main><p id="exit" aria-live="polite"></p>
+<script type="module">
+  import * as film from './sets/film.js'; import * as making from './sets/making.js';
+  const el = document.getElementById('set'), records = []; let cur = null;
+  function go(name) {
+    cur?.leave(); cur?.unmount();
+    document.querySelectorAll('nav button').forEach(b => b.toggleAttribute('aria-current', false)); document.querySelector(`nav [data-go=${name}]`).setAttribute('aria-current', 'page');
+    cur = name === 'film' ? film.mount(el, { onRecord: r => records.push(r) })
+      : making.mount(el, { moments: records, onExit: x => { document.getElementById('exit').textContent = `→ ${x.to}${x.attach ? ' with the moment attached (opt-in)' : ''}`; window.__exit = x; } });
+    window.__set = cur; window.__name = name;
+  }
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.go));
+  go('making'); window.__records = records;
+</script>
+</body>
+</html>

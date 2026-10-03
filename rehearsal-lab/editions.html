@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Editions — rehearsal lab</title>
+<style>body{margin:0;padding:16px;background:#f3efe6;color:#1b1b1b;font:14px/1.4 system-ui,sans-serif}.note{color:#6b665c;font-size:12px}</style>
+</head>
+<body>
+<p class="note">Rehearsal lab · Blueprint v1.1 §4.7 · module <code>sets/editions.js</code> · real payments: TEST MODE ·
+  <a href="?empty">launch truth with nothing ready</a> · <a href="?">with rehearsal samples</a></p>
+<main id="set"></main>
+<script type="module">
+  import { mount } from './sets/editions.js';
+  const empty = new URLSearchParams(location.search).has('empty');
+  const set = mount(document.getElementById('set'), {
+    items: empty ? [] : undefined, state: history.state?.ed,
+    onState(s) { history.pushState({ ed: s }, ''); },           // the journey owns history: Back keeps item + options
+  });
+  addEventListener('popstate', e => set.setState(e.state?.ed));
+  window.__set = set;
+</script>
+</body>
+</html>

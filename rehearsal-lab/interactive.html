@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Interactive — rehearsal lab</title>
+<style>body{margin:0;padding:16px;background:#f3efe6;color:#1b1b1b;font:14px/1.4 system-ui,sans-serif}.note{color:#6b665c;font-size:12px}
+.visit img{width:160px;border:1.5px solid #1b1b1b;margin-right:6px}</style>
+</head>
+<body>
+<p class="note">Rehearsal lab · Blueprint v1.1 §4.3 + D3 · module <code>sets/interactive.js</code> · stand-ins, not art direction</p>
+<div id="set"></div>
+<p class="visit"><strong>Visit Sheet (stub):</strong> <span id="kept">nothing kept yet</span></p>
+<script type="module">
+  import { mount } from './sets/interactive.js';
+  const kept = document.getElementById('kept'), items = [];
+  const set = mount(document.getElementById('set'), { reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    onKeep(r) { items.push(r); kept.innerHTML = items.map(x => `<img alt="Capture ${x.label}" src="${x.image}">`).join(''); } });
+  window.__set = set; window.__kept = items;
+</script>
+</body>
+</html>

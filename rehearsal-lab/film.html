@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Film set — rehearsal lab</title>
+<style>
+  body{margin:0;padding:16px;background:#f3efe6;color:#1b1b1b;font:14px/1.4 system-ui,sans-serif}
+  header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  h1{font-size:16px;margin:0}
+  .note{color:#6b665c;font-size:12px}
+  .visit{margin-top:16px;border-top:1.5px solid #1b1b1b;padding-top:8px}
+  .visit img{width:160px;border:1.5px solid #1b1b1b;margin-right:6px}
+  .leave{font:inherit;border:1.5px solid #1b1b1b;background:#f3efe6;padding:6px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1>FILM — rehearsal lab (Round 2 behaviour, stand-ins)</h1>
+  <span class="note">Blueprint v1.1 §4.4 · not art direction · module: <code>sets/film.js</code></span>
+  <button class="leave" id="leave">Leave the set (abandons a rolling take)</button>
+</header>
+<div id="set"></div>
+<section class="visit" aria-label="Visit Sheet (stub)"><strong>Visit Sheet (stub):</strong> <span id="kept">nothing kept yet</span></section>
+<script type="module">
+  import { mount } from './sets/film.js';
+  const kept = document.getElementById('kept'), items = [];
+  const film = mount(document.getElementById('set'), {
+    reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    onKeep(rec) { items.push(rec); kept.innerHTML = items.map(r => `<img alt="Take ${r.take} final frame" src="${r.image}">`).join(''); },
+  });
+  document.getElementById('leave').onclick = () => film.leave();
+  document.getElementById('set').focus();
+  window.__film = film; window.__kept = items;
+</script>
+</body>
+</html>
