@@ -38,9 +38,9 @@ label.chk{display:flex;gap:6px;align-items:center}
   <div class="head"><h1>ทดลองเม็ดสกรีน (Print screen)</h1><button id="min" aria-expanded="true">ย่อ</button></div>
   <div class="row"><span>แบบเม็ดสกรีน</span>
     <div class="seg" id="mode">
-      <button data-v="2" aria-pressed="true">4 สีจริง (CMYK)</button>
+      <button data-v="2">4 สีจริง (CMYK)</button>
       <button data-v="1">สกรีนในสีเดิม</button>
-      <button data-v="3">ลายจุดทับ</button>
+      <button data-v="3" aria-pressed="true">ลายจุดทับ (Aoh เลือก)</button>
     </div></div>
   <div class="row"><span>สีพื้นหลัง (เทสี)</span><div class="seg" id="bg"></div></div>
   <div class="row"><span>ขนาดเม็ด <output id="cellO"></output></span><input id="cell" type="range" min="3" max="16" step="0.5" value="6"></div>
@@ -54,7 +54,7 @@ label.chk{display:flex;gap:6px;align-items:center}
 </div>
 <script>
 const BGS=[['ม่วง','#5e357e'],['ชมพู','#e8457f'],['เหลือง','#f0b928'],['เขียวน้ำทะเล','#1f9e9c'],['ครีม','#f6e8cb'],['ขาว','#ffffff']];
-const S={mode:2,bg:'#5e357e',cell:6,amt:1,mis:1.5,zoom:1,solidK:1,grain:1,move:0,split:.5};
+const S={mode:3,bg:'#f6e8cb',cell:6,amt:1,mis:1.5,zoom:1,solidK:1,grain:1,move:0,split:.5};
 const $=id=>document.getElementById(id);
 const cv=$('c'),gl=cv.getContext('webgl',{antialias:false,preserveDrawingBuffer:true});
 const VS='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
