@@ -1,32 +1,33 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>By Thanest — Journey rehearsal</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<a class="skip" href="#content">Skip to current set</a>
-<header><a class="brand" href="#/studio">BY THANEST <small>Journey rehearsal · Round 2</small></a><a href="../">Original Maker preview ↗</a></header>
-<nav aria-label="Primary"><a href="#/work">WORK</a><a href="#/worlds">WORLDS</a><a href="#/editions">EDITIONS</a><a href="#/pricing">SERVICES &amp; PRICING</a><a href="#/contact">CONTACT</a></nav>
-<div class="notice">Temporary stand-ins, not art direction. Routes, transitions and the core behaviour of every set are playable. Performances, art and real business systems are not final. Nothing is sent or charged.</div>
-<main id="content" tabindex="-1">
-<div class="set-heading"><div><p id="eyebrow">THE STUDIO</p><h1 id="title">Already making.</h1></div><div class="travel"><button id="back">← Back</button><a href="#/studio">Studio ↗</a></div></div>
-<section id="stage" aria-label="Rehearsal stage">
-<div class="floor"></div>
-<div id="maker" class="actor"><div class="box">MAKER</div><div class="body"></div></div>
-<div id="table" class="prop">WORK TABLE</div>
-<div id="radio" class="prop">RADIO</div>
-<div id="hero" class="prop">ARCHIVE</div>
-<div id="companion" class="prop">PROPS</div>
-<div class="stage-note" id="stage-note"></div>
-<div id="objects" aria-label="Studio objects"></div>
-<div id="residue" class="residue" hidden>SEGMENT</div>
-</section>
-<p id="beat" role="status" aria-live="polite"></p>
-<section id="panel" aria-label="Current set content"></section>
+<!-- ONE STAGE (DEC-020): every set arrives into this stage and the previous state leaves. The URL only records the state. -->
+<main id="stage" tabindex="-1" aria-label="By Thanest — the studio">
+  <div id="studio" class="studio">
+    <div id="comp" class="comp">
+      <img id="studio-art" src="../art/ref_composition_v3.webp" alt="The Maker at his low table, writing, the box lid floating above his head.">
+      <div id="objects" class="objects" aria-label="Studio objects"></div>
+      <div id="residue" class="residue" hidden title="An escaped KHWAN segment">SEGMENT</div>
+    </div>
+  </div>
+  <div id="sets" class="sets"></div>
 </main>
-<footer><nav aria-label="Secondary"><a href="#/making">Making</a><a href="#/coffee">Coffee / Support</a><a href="#/about">About</a><a href="#/sound">Sound</a><a href="#/accessibility">Accessibility</a><a href="#/visit" id="visit-link">Visit Sheet (0)</a></nav><button id="sound" aria-pressed="false">Sound off</button><label><input type="checkbox" id="reduce"> Reduce motion</label></footer>
+<!-- the quiet truth layer: the world may invite, it may never hide the door -->
+<a id="home" class="corner home" href="#/studio">BY THANEST</a>
+<button id="back" class="corner back" hidden aria-label="Back">←</button>
+<button id="menu-btn" class="corner menu-btn" aria-expanded="false" aria-controls="menu">MENU</button>
+<div id="menu" class="sh-menu" hidden>
+  <nav aria-label="Primary"><a href="#/work">WORK</a><a href="#/worlds">WORLDS</a><a href="#/editions">EDITIONS</a><a href="#/pricing">SERVICES &amp; PRICING</a><a href="#/contact">CONTACT</a></nav>
+  <nav aria-label="Secondary"><a href="#/making">Making</a><a href="#/coffee">Coffee / Support</a><a href="#/about">About</a><a href="#/sound">Sound</a><a href="#/accessibility">Accessibility</a><a href="#/visit" id="visit-link">Visit Sheet (0)</a></nav>
+  <div class="menu-row"><button id="sound" aria-pressed="false">Sound off</button><label><input type="checkbox" id="reduce"> Reduce motion</label></div>
+  <p class="menu-note">Rehearsal: stand-ins, not art direction. Nothing is sent or charged. <a href="../">Original Maker preview ↗</a></p>
+</div>
+<p id="beat" class="corner beat" role="status" aria-live="polite"></p>
 <script type="module" src="./app.js"></script>
 </body></html>

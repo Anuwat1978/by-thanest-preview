@@ -1,3 +1,6 @@
+// By Thanest — journey rehearsal, ONE STAGE (DEC-020). Every set arrives into the stage from the object that was chosen;
+// the previous state leaves. The hash only records the state (Back, refresh and deep links stay real — Blueprint §2).
+// Set behaviour lives in ../rehearsal-lab/sets/*.js (tested modules). Stand-ins only — not art direction (rule 9).
 import * as khwanSet from '../rehearsal-lab/sets/khwan.js';
 import * as coffeeSet from '../rehearsal-lab/sets/coffee.js';
 import * as interactiveSet from '../rehearsal-lab/sets/interactive.js';
@@ -7,127 +10,157 @@ import * as pricingSet from '../rehearsal-lab/sets/pricing.js';
 import * as contactSet from '../rehearsal-lab/sets/contact.js';
 import * as editionsSet from '../rehearsal-lab/sets/editions.js';
 const $ = id => document.getElementById(id);
+
 // One visit's truth, owned by the journey (memory only; nothing personal is stored on the device unless the visitor chooses).
-const session={records:[],keeps:[],bindings:{},khwan:null,residues:[],lastProof:null,contactService:null,attach:null,draft:null,editions:null};
-const proofs=['khwan','film','interactive','coffee'];
-const routes = {
- studio:['THE STUDIO','Already making.','A shared stage. Choose an object or use the navigation.'],
- work:['WORK','What can we make?','Two services. Two different ways to take part.'],
- worlds:['WORLDS','Enter a world.','KHWAN is the first playable world in production.'],
- khwan:['KHWAN','A product with a life inside.','Can, RUSH, ribbon and lens are stand-ins. Full shake behaviour follows in Round 2.'],
- coffee:['COFFEE / SIGNALS','A small break. A living system.','The cup, stool and Radio share this corner. Free play and real support remain separate.'],
- interactive:['INTERACTIVE','Same context. New intent.','Demo camera. Capture, focus and reinterpretation follow in Round 2.'],
- film:['FILM','You choose where it ends.','A prop mug belongs to the take. The real coffee cup stays outside it.'],
- making:['MAKING','Open the moment.','Production evidence will appear here. No visitor history is fabricated.'],
- pricing:['SERVICES & PRICING','Let’s make something work.','Scope, budget range and timing will live here. Public prices are not approved yet.'],
- contact:['CONTACT','What are you imagining?','Rehearsal only. Nothing here is sent to a server.'],
- editions:['EDITIONS','Something worth keeping.','No product is available to buy in this rehearsal.'],
- about:['ABOUT','By Thanest.','High craft. Low ego. Open door.'],
- sound:['SOUND','You choose the volume.','An optional quiet rehearsal tone tests sound controls. It is not the soundtrack.'],
- accessibility:['ACCESSIBILITY','Another way in.','Every destination is a normal link. Use Tab and Enter, or reduce motion below.'],
- visit:['VISIT SHEET','What you kept.','Only what you chose to KEEP. No empty slots, no score.']
-};
-const objects=[['work','Archive → Work'],['worlds','Worlds object'],['khwan','Can → KHWAN'],['coffee','Cup → Coffee'],['interactive','Camera → Interactive'],['film','Slate → Film'],['making','Folder → Making'],['pricing','Note → Pricing'],['contact','Envelope → Contact'],['editions','Stall → Editions']];
-const names=['maker','table','radio','hero','companion'];
-// Pose values are normalized coordinates, rotation, scale. Shared nodes retain identity.
-const poses={
- studio:[[.32,.37,-2,1],[.46,.68,0,1],[.74,.62,5,1],[.15,.5,-8,.65],[.63,.60,0,1]],
- khwan:[[.12,.48,0,.55],[.42,.83,0,.5],[.84,.65,0,.65],[.49,.31,-8,1.3],[.7,.3,20,1]],
- coffee:[[.1,.5,0,.65],[.46,.64,0,.65],[.68,.51,-6,1],[.43,.32,0,.85],[.79,.3,0,1]],
- film:[[.27,.39,0,1],[.5,.62,90,.8],[.85,.67,3,.7],[.66,.30,-10,.8],[.39,.62,0,.85]],
- interactive:[[.1,.5,0,.6],[.44,.71,0,1.2],[.85,.65,0,.7],[.49,.32,0,1.15],[.73,.45,0,1]],
- quiet:[[.1,.51,0,.6],[.43,.73,0,1.2],[.87,.69,0,.6],[.45,.27,0,1],[.68,.49,0,1]]
-};
-let route='', generation=0, opening=false, reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let current=poses.studio.map(p=>[...p]), target=current.map(p=>[...p]), soundOn=false, audio, osc, gain;
-const trace=[];
-const record=(type,detail)=>{trace.push({type,detail,t:performance.now()});if(trace.length>100)trace.shift();};
-const card=(id,label,detail='')=>`<a class="card" href="#/${id}"><strong>${label}</strong><small>${detail}</small></a>`;
-function content(id){
- const tag='<span class="tag">ROUND 2 · STAND-INS · NOT ART DIRECTION</span>';
- const map={
- studio:`<h2>My head is busy. My calendar has room.</h2><p>Objects and text links lead to the same rooms. You can leave during the opening or change destination during a transformation.</p><div class="cards">${card('work','Discover the work','Film and Interactive')}${card('contact','Start a conversation','Go straight to Contact')}</div>`,
- work:`<div class="cards">${card('film','Film / AI Film','Choose the boundary of a story')}${card('interactive','Interactive / Web App','Change intent without losing context')}${card('making','Making By Thanest','Evidence of the work')}${card('pricing','Services & Pricing','Scope and next steps')}</div><p>No invented client cases. These are rehearsal experiences.</p>`,
- worlds:`<div class="cards">${card('khwan','KHWAN','Enter the beverage world')}</div>`,
- khwan:`${tag}<div class="set-mount" id="set-mount"></div>`,
- coffee:`${tag}<div class="set-mount" id="set-mount"></div>`,
- interactive:`${tag}<div class="set-mount" id="set-mount"></div>`,
- film:`${tag}<div class="set-mount" id="set-mount"></div>`,
- making:`${tag}<div class="set-mount" id="set-mount"></div>`,
- pricing:`${tag}<div class="set-mount" id="set-mount"></div>`,
- contact:`${tag}<div class="set-mount" id="set-mount"></div>`,
- editions:`<div class="set-mount" id="set-mount"></div><p class="lab-link">Rehearsal only: <a href="../rehearsal-lab/editions.html">see the stall with labelled sample items ↗</a></p>`,
- about:`<p>A living studio by Thanest. Film / AI Film and Interactive / Web App.</p><a href="#/contact">Start a conversation</a>`,
- sound:`<p>${routes.sound[2]} Sound starts only when you choose it. Switching sets never turns it on. Hiding the tab suspends audio, not navigation or world state.</p>`,
- visit:`${session.keeps.length?`<div class="cards">${session.keeps.map((k,i)=>`<figure class="card"><img src="${k.image}" alt="Kept ${k.kind}" style="width:100%"><figcaption><small>${k.kind.replace(/-/g,' ')}</small></figcaption></figure>`).join('')}</div>`:'<p>Nothing kept yet. When a set offers KEEP, what you keep appears here.</p>'}`,
- accessibility:`<p>Keyboard: Tab moves among links and controls; Enter activates them. The first link skips to this content. There are no page-wide Space shortcuts.</p><p>Reduced motion makes stage changes immediate and uses a short opening acknowledgement. All routes remain available.</p>`
- };return map[id];
+const session = { records: [], keeps: [], bindings: {}, khwan: null, residues: [], lastProof: null, contactService: null, attach: null, draft: null };
+const proofs = ['khwan', 'film', 'interactive', 'coffee'];
+const names = { studio: 'The studio', work: 'Work', worlds: 'Worlds', khwan: 'KHWAN', coffee: 'Coffee corner', interactive: 'Interactive', film: 'Film set',
+  making: 'Making By Thanest', pricing: 'Services & Pricing', contact: 'Contact', editions: 'Editions', about: 'About', sound: 'Sound', accessibility: 'Accessibility', visit: 'Visit Sheet' };
+// Information routes get no ceremony (Blueprint: ceremony decreases as intent becomes clearer).
+const quiet = ['pricing', 'contact', 'editions', 'about', 'sound', 'accessibility', 'visit', 'work', 'worlds', 'making'];
+// Studio doors: real things in Aoh's drawing (hot) and floating stand-ins in the empty side (float). [route, label, x, y, w, h | portrait x, y]
+const doors = [
+  ['making', 'Archive head → Making', .41, .33, .25, .30, 'hot', 0, 0, 'Making'],
+  ['coffee', 'Mug → Coffee', .663, .555, .08, .15, 'hot', 0, 0, 'Coffee'],
+  ['pricing', 'Notes → Services & Pricing', .583, .555, .085, .08, 'hot', 0, 0, 'Pricing'],
+  ['khwan', 'KHWAN can', .80, .22, 0, 0, 'float', .36, 1.06],
+  ['film', 'Slate → Film', .90, .40, 0, 0, 'float', .64, 1.06],
+  ['interactive', 'Camera → Interactive', .80, .58, 0, 0, 'float', .36, 1.18],
+  ['editions', 'Price tag → Editions', .90, .76, 0, 0, 'float', .64, 1.18],
+  ['contact', 'Paper plane → Contact', .70, .10, 0, 0, 'float', .50, 1.30],
+];
+const residueHome = { studio: [.50, .90], film: [.50, .90] }; // under the Maker's table; by the chair leg
+
+let route = '', generation = 0, opening = false, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches, soundOn = false, audio, osc, gain;
+let mounted = null, mountedId = null, layer = null;
+const trace = []; const record = (type, detail) => { trace.push({ type, detail, t: performance.now() }); if (trace.length > 100) trace.shift(); };
+const say = t => { $('beat').textContent = t; };
+const portrait = () => innerHeight > innerWidth * 1.1;
+
+function paintDoors() {
+  $('objects').innerHTML = doors.map(([id, label, x, y, w, h, kind, px, py, short], i) => {
+    const X = portrait() && kind === 'float' ? px : x, Y = portrait() && kind === 'float' ? py : y;
+    const box = kind === 'hot' ? `width:${w * 100}%;height:${h * 100}%;` : '';
+    return `<a class="${kind}" href="#/${id}" data-door="${id}" style="left:${X * 100}%;top:${Y * 100}%;${box}--i:${i}"${kind === 'hot' ? ` aria-label="${label}"` : ''}>${kind === 'hot' ? `<span>${portrait() ? short : label}</span>` : label}</a>`;
+  }).join('');
 }
-let mounted=null,mountedId=null;
-const go=id=>{const h=`#/${id}`;if(location.hash===h)return;history.pushState({rehearsalIndex:(history.state?.rehearsalIndex||0)+1},'',h);show(id);};
-const keep=r=>{session.keeps.push(r);paintVisit();};
-function mountSet(id){
- const el=$('set-mount');document.body.classList.toggle('set-active',!!el);if(!el)return;
- if(proofs.includes(id))session.lastProof=id;
- const reducedMotion=reduced;
- const m={khwan:()=>khwanSet.mount(el,{reducedMotion,state:session.khwan,onKeep:keep,onRecord:r=>session.records.push(r),onResidue:r=>{session.residues.push(r);record('residue',r.id);}}),
-  coffee:()=>coffeeSet.mount(el,{reducedMotion,bindings:session.bindings,onBindings:b=>{session.bindings=b;}}),
-  interactive:()=>interactiveSet.mount(el,{reducedMotion,onKeep:keep}),
-  film:()=>filmSet.mount(el,{reducedMotion,onKeep:keep,onRecord:r=>session.records.push(r)}),
-  making:()=>makingSet.mount(el,{moments:session.records,onExit:x=>{session.attach=x.attach;go(x.to);}}),
-  pricing:()=>pricingSet.mount(el,{showRanges:false,onStartBrief:x=>{session.contactService=x.service;go('contact');}}),
-  contact:()=>contactSet.mount(el,{interest:session.attach?(session.attach.kind==='khwan-shot'?'KHWAN':'Film'):({khwan:'KHWAN',film:'Film',interactive:'Interactive',coffee:'Studio Signals'})[session.lastProof]||null,service:session.contactService,draft:session.draft,onDraft:d=>{session.draft=d;}}),
-  editions:()=>editionsSet.mount(el,{items:[]})}[id];
- mounted=m?m():null;mountedId=id;window.__rehearsal.set=mounted;
+
+// ---------------- info states (quiet: information leads) ----------------
+function infoHTML(id) {
+  const door = (r, t) => `<a href="#/${r}">${t}</a>`;
+  return {
+    work: `<h2>Work</h2><p>Two services, two ways to take part. No invented client cases.</p><div class="doors">${door('film', 'Film / AI Film')}${door('interactive', 'Interactive / Web App')}${door('making', 'Making By Thanest')}${door('pricing', 'Services & Pricing')}</div>`,
+    worlds: `<h2>Worlds</h2><p>KHWAN — a world you can enter and play.</p><div class="doors">${door('khwan', 'Enter KHWAN')}</div>`,
+    about: `<h2>By Thanest</h2><p>My head is busy. My calendar has room.</p><p>High craft. Low ego. Open door.</p><div class="doors">${door('contact', 'Start a conversation')}</div>`,
+    sound: `<h2>Sound</h2><p>Sound starts only when you choose it (MENU → Sound). Switching sets never turns it on. Hiding the tab pauses audio, not the world.</p>`,
+    accessibility: `<h2>Accessibility</h2><p>Every destination is a normal link in MENU. Tab and Enter work everywhere; there is no page-wide Space shortcut. Reduce motion makes changes immediate.</p>`,
+    visit: `<h2>Visit Sheet</h2>${session.keeps.length ? `<div class="kept">${session.keeps.map(k => `<figure><img src="${k.image}" alt="Kept ${k.kind}"><figcaption><small>${k.kind.replace(/-/g, ' ')}</small></figcaption></figure>`).join('')}</div>` : '<p>Nothing kept yet. When a set offers KEEP, what you keep appears here.</p>'}`,
+    'not-found': `<h2>That room is not here.</h2><div class="doors">${door('studio', 'Back to the studio')}</div>`,
+  }[id];
 }
-function unmountSet(){if(!mounted)return;if(mountedId==='khwan')session.khwan=mounted.getState();mounted.leave?.();mounted.unmount?.();mounted=null;mountedId=null;document.body.classList.remove('set-active');}
-// D4: every residue has a home, and never rewrites another proof (the Film take still runs as scripted)
-function paintResidue(){const r=$('residue');const has=session.residues.some(x=>x.kind==='khwan-segment');const where={studio:[.52,.8],film:[.44,.8]}[route];
- r.hidden=!has||!where;if(!r.hidden){r.style.left=`${where[0]*100}%`;r.style.top=`${where[1]*100}%`;r.title=route==='film'?'The escaped segment rests by the chair leg':'The escaped segment rests under the Maker\'s table';}}
-function paintVisit(){const a=$('visit-link');if(a)a.textContent=`Visit Sheet (${session.keeps.length})`;}
-function parseRoute(){const key=location.hash.replace(/^#\/?/,'').replace(/\/$/,'');return key||'studio';}
-function show(id,{initial=false}={}){
- unmountSet();generation++;const token=generation;opening=false;
- if(!routes[id]){route='not-found';$('eyebrow').textContent='UNKNOWN DESTINATION';$('title').textContent='That room is not here.';$('panel').innerHTML='<p>This link is not a rehearsal route.</p><a href="#/studio">Return to Studio</a>';$('objects').hidden=true;$('beat').textContent='Navigation remains available.';paintResidue();return;}
- route=id;document.title=`${routes[id][0]} — By Thanest rehearsal`;
- $('eyebrow').textContent=routes[id][0];$('title').textContent=routes[id][1];$('stage-note').textContent=routes[id][2];$('panel').innerHTML=content(id);
- mountSet(id);
- $('objects').hidden=id!=='studio';
- const labels={studio:['WORK TABLE','ARCHIVE','CUP'],khwan:['STAGE','CAN','RIBBON'],coffee:['STOOL','CUP','PANEL'],film:['CHAIR','SLATE','PROP CUP'],interactive:['DISPLAY','CAMERA','PHOTO']};
- const l=labels[id]||['DESK',routes[id][0],'NOTES'];$('table').textContent=l[0];$('hero').textContent=l[1];$('companion').textContent=l[2];
- target=(poses[id]||poses.quiet).map(p=>[...p]);
- const immediate=initial||reduced||['pricing','contact','editions','about','sound','accessibility'].includes(id);
- if(immediate)current=target.map(p=>[...p]);
- $('beat').textContent=immediate?'Ready. Choose where to go next.':'The same stage is rearranging. You can change destination now.';
- record('route',id);paintResidue();
- document.querySelectorAll('nav a').forEach(a=>{if(a.hash===`#/${id}`)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
- if(initial&&id==='studio'){
-  opening=true;record('opening-start',reduced?'reduced':'full');
-  if(!reduced){current=target.map((p,i)=>[p[0],1.25+i*.12,p[2]+35,p[3]*.2]);$('beat').textContent='Opening: the table arrives, the Maker assembles. Navigation is already open.';}
-  else $('beat').textContent='Opening: the studio is assembled. Reduced motion is on.';
-  setTimeout(()=>{if(token!==generation)return;opening=false;$('beat').textContent='The studio is already at work. Choose an object or a link.';record('opening-complete',id);},reduced?180:1800);
- }
- if(!initial)$('content').focus({preventScroll:true});
+
+// ---------------- set modules ----------------
+const keep = r => { session.keeps.push(r); paintVisit(); };
+function mountInto(el, id) {
+  if (proofs.includes(id)) session.lastProof = id;
+  const reducedMotion = reduced;
+  const m = {
+    khwan: () => khwanSet.mount(el, { reducedMotion, state: session.khwan, onKeep: keep, onRecord: r => session.records.push(r), onResidue: r => { session.residues.push(r); record('residue', r.id); } }),
+    coffee: () => coffeeSet.mount(el, { reducedMotion, bindings: session.bindings, onBindings: b => { session.bindings = b; } }),
+    interactive: () => interactiveSet.mount(el, { reducedMotion, onKeep: keep }),
+    film: () => filmSet.mount(el, { reducedMotion, onKeep: keep, onRecord: r => session.records.push(r) }),
+    making: () => makingSet.mount(el, { moments: session.records, onExit: x => { session.attach = x.attach; go(x.to); } }),
+    pricing: () => pricingSet.mount(el, { showRanges: false, onStartBrief: x => { session.contactService = x.service; go('contact'); } }),
+    contact: () => contactSet.mount(el, { interest: session.attach ? (session.attach.kind === 'khwan-shot' ? 'KHWAN' : 'Film') : ({ khwan: 'KHWAN', film: 'Film', interactive: 'Interactive', coffee: 'Studio Signals' })[session.lastProof] || null,
+      service: session.contactService, draft: session.draft, onDraft: d => { session.draft = d; } }),
+    editions: () => editionsSet.mount(el, { items: [] }),
+  }[id];
+  return m ? m() : null;
 }
-let last=performance.now();
-function tick(now){const dt=Math.min((now-last)/1000,.05);last=now;const blend=reduced?1:1-Math.exp(-dt*7);const w=$('stage').clientWidth,h=$('stage').clientHeight;let moving=false;
- names.forEach((name,i)=>{current[i]=current[i].map((v,j)=>{const gap=target[i][j]-v;if(Math.abs(gap)>.002)moving=true;return v+gap*blend;});const [x,y,r,s]=current[i];const el=$(name);const mobile=w<600;const scale=s*(mobile?.72:1);el.style.transform=`translate(${x*w-el.offsetWidth/2}px,${y*h-el.offsetHeight/2}px) rotate(${r}deg) scale(${scale})`;});
- if(!moving&&!opening&&$('beat').textContent.startsWith('The same stage'))$('beat').textContent='Ready. The stage is settled; navigation stays open.';
- requestAnimationFrame(tick);
+function unmountSet() {
+  if (!mounted) return;
+  if (mountedId === 'khwan') session.khwan = mounted.getState();
+  mounted.leave?.(); mounted.unmount?.(); mounted = null; mountedId = null;
 }
-async function applySound(){if(!soundOn||document.hidden){if(audio)await audio.suspend();return;}if(!audio){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Audio is not supported');audio=new AC();osc=audio.createOscillator();gain=audio.createGain();osc.frequency.value=146.83;gain.gain.value=.012;osc.connect(gain).connect(audio.destination);osc.start();}await audio.resume();}
-function paintSound(){$('sound').textContent=soundOn?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(soundOn));}
-$('sound').onclick=async()=>{soundOn=!soundOn;paintSound();try{await applySound();}catch{soundOn=false;paintSound();$('beat').textContent='Audio is unavailable. All routes still work.';}};
-document.addEventListener('visibilitychange',()=>applySound().catch(()=>{}));
-function setReduced(value){reduced=value;$('reduce').checked=value;if(value)current=target.map(p=>[...p]);record('reduced-motion',value);}
-$('reduce').checked=reduced;$('reduce').onchange=e=>setReduced(e.target.checked);
-matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',e=>setReduced(e.matches));
-$('back').onclick=()=>{if(history.state?.rehearsalIndex>0)history.back();else location.hash='/studio';};
-let historyIndex=history.state?.rehearsalIndex||0;
-history.replaceState({...history.state,rehearsalIndex:historyIndex},'');
-document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#/"]');if(!a||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;e.preventDefault();if(location.hash===a.hash)return;historyIndex=(history.state?.rehearsalIndex||0)+1;history.pushState({rehearsalIndex:historyIndex},'',a.hash);show(parseRoute());});
-window.addEventListener('popstate',()=>show(parseRoute()));
-window.addEventListener('hashchange',()=>{if(parseRoute()!==route)show(parseRoute());});
-$('objects').innerHTML=objects.map(([id,label])=>`<a href="#/${id}">${label}</a>`).join('');
-window.__rehearsal={set:null,session,get state(){return {route,opening,reduced,soundOn,audioState:audio?.state||'not-created',trace:[...trace],current:current.map(p=>[...p]),target:target.map(p=>[...p])};}};
-show(parseRoute(),{initial:true});requestAnimationFrame(tick);
+
+// ---------------- state changes on the one stage ----------------
+function originOf(id) { // the set grows out of the object that was chosen (or the stage centre)
+  const a = document.querySelector(`[data-door="${id}"]`); if (!a || route !== 'studio') return ['50%', '50%'];
+  const r = a.getBoundingClientRect(); return [`${(r.left + r.width / 2) / innerWidth * 100}%`, `${(r.top + r.height / 2) / innerHeight * 100}%`];
+}
+function show(id, { initial = false } = {}) {
+  const prev = route; unmountSet(); generation++; const token = generation; opening = false; document.body.classList.remove('opening');
+  if (!names[id] && id !== 'studio') id = 'not-found';
+  const [ox, oy] = originOf(id);
+  route = id; document.title = `${names[id] || 'Not here'} — By Thanest rehearsal`;
+  // the previous set leaves (it is never stacked as a page)
+  if (layer) { const old = layer; old.classList.add('leave'); setTimeout(() => old.remove(), reduced ? 0 : 500); layer = null; }
+  [...$('sets').children].forEach(c => { if (!c.classList.contains('leave')) c.remove(); });
+  const inSet = id !== 'studio';
+  document.body.classList.toggle('in-set', inSet);
+  $('back').hidden = !inSet; $('objects').hidden = inSet;
+  if (inSet) {
+    layer = document.createElement('section'); layer.className = 'set-layer'; layer.setAttribute('aria-label', names[id] || 'Not here');
+    layer.style.setProperty('--ox', ox); layer.style.setProperty('--oy', oy);
+    const immediate = initial || reduced || quiet.includes(id);
+    if (immediate) layer.classList.add('instant'); else layer.classList.add('enter');
+    layer.innerHTML = `<div class="set-frame">${infoHTML(id) ? `<div class="info">${infoHTML(id)}</div>` : `<p class="tagline">${names[id].toUpperCase()} · STAND-INS · NOT ART DIRECTION</p><div class="set-mount" id="set-mount"></div>`}</div>`;
+    $('sets').appendChild(layer);
+    const el = layer.querySelector('#set-mount'); if (el) { mounted = mountInto(el, id); mountedId = id; }
+    if (!immediate) requestAnimationFrame(() => requestAnimationFrame(() => { if (token === generation) layer?.classList.remove('enter'); }));
+    say(immediate ? `${names[id] || 'Not here'}.` : `The studio rebuilds itself into the ${names[id].toLowerCase()} — you can change your mind now.`);
+    if (!initial) layer.focus?.({ preventScroll: true });
+  } else {
+    say(prev && prev !== 'studio' ? 'Back in the studio — it reassembles from what is true now.' : 'The studio is already at work. Choose something in it, or MENU.');
+  }
+  window.__rehearsal.set = mounted;
+  record('route', id); paintResidue(); paintNav();
+  if (initial && id === 'studio') {
+    opening = true; record('opening-start', reduced ? 'reduced' : 'full');
+    if (!reduced) { document.body.classList.add('opening'); say('Opening: the studio assembles. Everything is already open to choose.'); }
+    else say('The studio is assembled. Reduced motion is on.');
+    setTimeout(() => { if (token !== generation) return; opening = false; document.body.classList.remove('opening'); say('The studio is already at work. Choose something in it, or MENU.'); record('opening-complete', id); }, reduced ? 180 : 1800);
+  }
+}
+// D4: every residue has a home and never rewrites another proof (the Film take still runs as scripted)
+function paintResidue() {
+  const r = $('residue'), has = session.residues.some(x => x.kind === 'khwan-segment'), where = residueHome[route];
+  r.hidden = !has || !where; if (r.hidden) return;
+  r.style.left = `${where[0] * 100}%`; r.style.top = `${where[1] * 100}%`;
+  r.title = route === 'film' ? 'The escaped segment rests by the chair leg' : "The escaped segment rests under the Maker's table";
+  if (route === 'film') { // the Film set is drawn by its module: show the segment's home in the set's own corner
+    const s = layer?.querySelector('.set-frame'); if (s && !s.querySelector('.residue')) s.insertAdjacentHTML('afterbegin', '<div class="residue" style="position:relative;transform:none;width:28px;margin:0 0 6px" title="The escaped segment rests by the chair leg">SEG</div>');
+    r.hidden = true;
+  }
+}
+function paintNav() { document.querySelectorAll('.sh-menu nav a').forEach(a => a.hash === `#/${route}` ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')); }
+function paintVisit() { $('visit-link').textContent = `Visit Sheet (${session.keeps.length})`; }
+function setMenu(open) { $('menu').hidden = !open; $('menu-btn').setAttribute('aria-expanded', String(open)); $('menu-btn').textContent = open ? 'CLOSE' : 'MENU'; }
+
+// ---------------- routing: the URL records the state ----------------
+function parseRoute() { const key = location.hash.replace(/^#\/?/, '').replace(/\/$/, ''); return key || 'studio'; }
+const go = id => { const h = `#/${id}`; if (location.hash === h) return; history.pushState({ rehearsalIndex: (history.state?.rehearsalIndex || 0) + 1 }, '', h); show(id); };
+history.replaceState({ ...history.state, rehearsalIndex: history.state?.rehearsalIndex || 0 }, '');
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="#/"]'); if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  e.preventDefault(); setMenu(false); if (location.hash === a.hash || (a.hash === '#/studio' && route === 'studio')) return;
+  history.pushState({ rehearsalIndex: (history.state?.rehearsalIndex || 0) + 1 }, '', a.hash); show(parseRoute());
+});
+addEventListener('popstate', () => show(parseRoute()));
+addEventListener('hashchange', () => { if (parseRoute() !== route) show(parseRoute()); });
+$('back').onclick = () => { if (history.state?.rehearsalIndex > 0) history.back(); else go('studio'); };
+$('menu-btn').onclick = () => setMenu($('menu').hidden);
+addEventListener('keydown', e => { if (e.key === 'Escape' && !$('menu').hidden) { setMenu(false); $('menu-btn').focus(); } });
+addEventListener('resize', () => { paintDoors(); paintResidue(); });
+
+// ---------------- sound + reduced motion ----------------
+async function applySound() { if (!soundOn || document.hidden) { if (audio) await audio.suspend(); return; } if (!audio) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw Error('Audio is not supported'); audio = new AC(); osc = audio.createOscillator(); gain = audio.createGain(); osc.frequency.value = 146.83; gain.gain.value = .012; osc.connect(gain).connect(audio.destination); osc.start(); } await audio.resume(); }
+function paintSound() { $('sound').textContent = soundOn ? 'Sound on' : 'Sound off'; $('sound').setAttribute('aria-pressed', String(soundOn)); }
+$('sound').onclick = async () => { soundOn = !soundOn; paintSound(); try { await applySound(); } catch { soundOn = false; paintSound(); say('Audio is unavailable. Everything else still works.'); } };
+document.addEventListener('visibilitychange', () => applySound().catch(() => {}));
+function setReduced(v) { reduced = v; $('reduce').checked = v; document.body.classList.toggle('reduced', v); record('reduced-motion', v); }
+$('reduce').onchange = e => setReduced(e.target.checked);
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => setReduced(e.matches));
+
+window.__rehearsal = { set: null, session, get state() { return { route, opening, reduced, soundOn, audioState: audio?.state || 'not-created', trace: [...trace] }; } };
+setReduced(reduced); paintDoors(); paintVisit(); show(parseRoute(), { initial: true });
