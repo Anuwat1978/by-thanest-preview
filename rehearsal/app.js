@@ -18,18 +18,19 @@ const names = { studio: 'The studio', work: 'Work', worlds: 'Worlds', khwan: 'KH
   making: 'Making By Thanest', pricing: 'Services & Pricing', contact: 'Contact', editions: 'Editions', about: 'About', sound: 'Sound', accessibility: 'Accessibility', visit: 'Visit Sheet' };
 // Information routes get no ceremony (Blueprint: ceremony decreases as intent becomes clearer).
 const quiet = ['pricing', 'contact', 'editions', 'about', 'sound', 'accessibility', 'visit', 'work', 'worlds', 'making'];
-// Studio doors: real things in Aoh's drawing (hot) and floating stand-ins in the empty side (float). [route, label, x, y, w, h | portrait x, y]
+// Studio doors float around the Maker (the Maker page itself keeps its own head/lid play). [route, label, x, y | portrait x, y]
 const doors = [
-  ['making', 'Archive head → Making', .41, .33, .25, .30, 'hot', 0, 0, 'Making'],
-  ['coffee', 'Mug → Coffee', .663, .555, .08, .15, 'hot', 0, 0, 'Coffee'],
-  ['pricing', 'Notes → Services & Pricing', .583, .555, .085, .08, 'hot', 0, 0, 'Pricing'],
-  ['khwan', 'KHWAN can', .80, .22, 0, 0, 'float', .36, 1.06],
-  ['film', 'Slate → Film', .90, .40, 0, 0, 'float', .64, 1.06],
-  ['interactive', 'Camera → Interactive', .80, .58, 0, 0, 'float', .36, 1.18],
-  ['editions', 'Price tag → Editions', .90, .76, 0, 0, 'float', .64, 1.18],
-  ['contact', 'Paper plane → Contact', .70, .10, 0, 0, 'float', .50, 1.30],
+  ['making', 'Archive folder → Making', .22, .30, .28, .70],
+  ['coffee', 'Mug → Coffee', .18, .44, .72, .70],
+  ['pricing', 'Notes → Services & Pricing', .22, .58, .28, .77],
+  ['contact', 'Paper plane → Contact', .18, .72, .72, .77],
+  ['khwan', 'KHWAN can', .78, .30, .28, .84],
+  ['film', 'Slate → Film', .82, .44, .72, .84],
+  ['interactive', 'Camera → Interactive', .78, .58, .28, .91],
+  ['editions', 'Price tag → Editions', .82, .72, .72, .91],
 ];
-const residueHome = { studio: [.50, .90], film: [.50, .90] }; // under the Maker's table; by the chair leg
+const residueHome = { studio: [.53, .70], film: [.50, .90] }; // under the Maker's table; by the chair leg
+const residueHomePortrait = { studio: [.55, .63] };
 
 let route = '', generation = 0, opening = false, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches, soundOn = false, audio, osc, gain;
 let mounted = null, mountedId = null, layer = null;
@@ -38,11 +39,24 @@ const say = t => { $('beat').textContent = t; };
 const portrait = () => innerHeight > innerWidth * 1.1;
 
 function paintDoors() {
-  $('objects').innerHTML = doors.map(([id, label, x, y, w, h, kind, px, py, short], i) => {
-    const X = portrait() && kind === 'float' ? px : x, Y = portrait() && kind === 'float' ? py : y;
-    const box = kind === 'hot' ? `width:${w * 100}%;height:${h * 100}%;` : '';
-    return `<a class="${kind}" href="#/${id}" data-door="${id}" style="left:${X * 100}%;top:${Y * 100}%;${box}--i:${i}"${kind === 'hot' ? ` aria-label="${label}"` : ''}>${kind === 'hot' ? `<span>${portrait() ? short : label}</span>` : label}</a>`;
+  $('objects').innerHTML = doors.map(([id, label, x, y, px, py], i) => {
+    const X = portrait() ? px : x, Y = portrait() ? py : y;
+    return `<a href="#/${id}" data-door="${id}" aria-label="${label}" style="left:${X * 100}%;top:${Y * 100}%;--i:${i}">${portrait() ? label.split('→').pop().replace('Services & ', '').trim() : label}</a>`;
   }).join('');
+}
+// The studio's opening is the Maker page's own (ink loader → lid → lands on the head). Doors arrive after it lands.
+function watchLanding(token) {
+  const f = $('maker'), t0 = performance.now();
+  const check = () => {
+    if (token !== generation && route !== 'studio') return;
+    let landed = false; try { const i = f.contentWindow.__intro; landed = !!i && !i.active; } catch {}
+    if (landed || performance.now() - t0 > 20000) { // fallback only if the studio never reports (e.g. a failed load)
+      document.body.classList.add('doors-in'); if (opening) { opening = false; say('The studio is already at work. Choose something around him, or MENU.'); record('opening-complete', 'studio'); }
+      return;
+    }
+    requestAnimationFrame(check);
+  };
+  check();
 }
 
 // ---------------- info states (quiet: information leads) ----------------
@@ -89,7 +103,7 @@ function originOf(id) { // the set grows out of the object that was chosen (or t
   const r = a.getBoundingClientRect(); return [`${(r.left + r.width / 2) / innerWidth * 100}%`, `${(r.top + r.height / 2) / innerHeight * 100}%`];
 }
 function show(id, { initial = false } = {}) {
-  const prev = route; unmountSet(); generation++; const token = generation; opening = false; document.body.classList.remove('opening');
+  const prev = route; unmountSet(); generation++; const token = generation; opening = false;
   if (!names[id] && id !== 'studio') id = 'not-found';
   const [ox, oy] = originOf(id);
   route = id; document.title = `${names[id] || 'Not here'} — By Thanest rehearsal`;
@@ -111,20 +125,19 @@ function show(id, { initial = false } = {}) {
     say(immediate ? `${names[id] || 'Not here'}.` : `The studio rebuilds itself into the ${names[id].toLowerCase()} — you can change your mind now.`);
     if (!initial) layer.focus?.({ preventScroll: true });
   } else {
+    const f = $('maker'); if (!f.src) { f.src = f.dataset.src; if (!initial) { opening = true; say('Loading the studio…'); watchLanding(token); } } // the live studio loads only when it is first needed
     say(prev && prev !== 'studio' ? 'Back in the studio — it reassembles from what is true now.' : 'The studio is already at work. Choose something in it, or MENU.');
   }
   window.__rehearsal.set = mounted;
   record('route', id); paintResidue(); paintNav();
   if (initial && id === 'studio') {
     opening = true; record('opening-start', reduced ? 'reduced' : 'full');
-    if (!reduced) { document.body.classList.add('opening'); say('Opening: the studio assembles. Everything is already open to choose.'); }
-    else say('The studio is assembled. Reduced motion is on.');
-    setTimeout(() => { if (token !== generation) return; opening = false; document.body.classList.remove('opening'); say('The studio is already at work. Choose something in it, or MENU.'); record('opening-complete', id); }, reduced ? 180 : 1800);
-  }
+    say('Loading the studio…'); watchLanding(token);
+  } else if (id === 'studio' && !opening) document.body.classList.add('doors-in');
 }
 // D4: every residue has a home and never rewrites another proof (the Film take still runs as scripted)
 function paintResidue() {
-  const r = $('residue'), has = session.residues.some(x => x.kind === 'khwan-segment'), where = residueHome[route];
+  const r = $('residue'), has = session.residues.some(x => x.kind === 'khwan-segment'), where = (portrait() && residueHomePortrait[route]) || residueHome[route];
   r.hidden = !has || !where; if (r.hidden) return;
   r.style.left = `${where[0] * 100}%`; r.style.top = `${where[1] * 100}%`;
   r.title = route === 'film' ? 'The escaped segment rests by the chair leg' : "The escaped segment rests under the Maker's table";

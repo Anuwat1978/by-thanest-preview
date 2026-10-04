@@ -1,30 +1,26 @@
 /* One full-screen stage (DEC-020). Stand-in styling only — not art direction (rule 9). */
-:root{--ink:#1b1b1b;--paper:#fdfdfc;--soft:#6b665c;--ease:cubic-bezier(.2,.8,.2,1);font-family:system-ui,sans-serif;color:var(--ink)}
+:root{--ink:#1b1b1b;--paper:#FCFCFA;--soft:#6b665c;--ease:cubic-bezier(.2,.8,.2,1);font-family:system-ui,sans-serif;color:var(--ink)}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--paper)}
 #stage{position:fixed;inset:0;outline:none;overflow:hidden}
 :where([hidden]){display:none!important}
 :focus-visible{outline:3px solid #325fda;outline-offset:3px}
 
-/* the studio: Aoh's composition, letterboxed to the viewport */
-.studio{position:absolute;inset:0;display:grid;place-items:center;transition:transform .7s var(--ease),filter .7s var(--ease),opacity .7s var(--ease)}
-.comp{position:relative;width:min(100vw,calc(100vh*1.779));aspect-ratio:2000/1124}
-.comp img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+/* the studio: Aoh's live Maker page (its own loader, lid and size), full stage */
+.studio{position:absolute;inset:0;transition:transform .7s var(--ease),filter .7s var(--ease),opacity .7s var(--ease)}
+.maker{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:var(--paper)}
 body.in-set .studio{transform:scale(.86);filter:blur(3px);opacity:.14;pointer-events:none}
-body.opening .comp img{animation:assemble 1.6s var(--ease) both}
-@keyframes assemble{0%{opacity:0;transform:translateY(-4%) scale(.96)}60%{opacity:1}100%{opacity:1;transform:none}}
+/* once a set covers the stage, the live studio stops drawing behind it (it resumes, not replays, on return) */
+body.in-set .maker{visibility:hidden;transition:visibility 0s .7s}
 
-/* studio objects: real things in the drawing, plus floating stand-ins in the empty right side */
-.objects a{position:absolute;transform:translate(-50%,-50%);text-decoration:none;color:var(--ink);font-size:clamp(9px,1vw,12px);font-weight:700;letter-spacing:.06em}
-.objects a.hot{border:2px dashed transparent;border-radius:6px;display:grid;place-items:end center;padding:4px}
-.objects a.hot span{background:#fffdf7e6;padding:2px 6px;border:1px solid var(--ink);opacity:0;transition:opacity .2s}
-.objects a.hot:hover,.objects a.hot:focus-visible{border-color:var(--ink)}
-.objects a.hot:hover span,.objects a.hot:focus-visible span{opacity:1}
-.objects a.float{background:#fffdf7;border:2px solid var(--ink);padding:8px 10px;animation:bob 3.2s ease-in-out infinite;white-space:nowrap}
-.objects a.float:hover{background:#e9f3d6}
-body.opening .objects a{animation:pop .5s var(--ease) both;animation-delay:calc(.9s + var(--i)*.09s)}
+/* studio doors float around the Maker, arriving after the lid lands */
+.objects{position:absolute;inset:0;pointer-events:none}
+.objects a{position:absolute;transform:translate(-50%,-50%);text-decoration:none;color:var(--ink);font:700 clamp(10px,1vw,12px)/1.2 system-ui,sans-serif;letter-spacing:.06em;
+  background:#fffdf7;border:2px solid var(--ink);padding:8px 10px;white-space:nowrap;pointer-events:auto;opacity:0;visibility:hidden}
+.objects a:hover,.objects a:focus-visible{background:#e9f3d6}
+body.doors-in .objects a{visibility:visible;animation:pop .45s var(--ease) both,bob 3.4s ease-in-out infinite;animation-delay:calc(var(--i)*.07s),calc(.5s + var(--i)*.07s)}
 @keyframes pop{from{opacity:0;transform:translate(-50%,-30%) scale(.6)}to{opacity:1;transform:translate(-50%,-50%)}}
-@keyframes bob{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(-50%,-56%)}}
+@keyframes bob{0%,100%{opacity:1;transform:translate(-50%,-50%)}50%{opacity:1;transform:translate(-50%,-58%)}}
 .residue{position:absolute;transform:translate(-50%,-50%);width:3.2%;aspect-ratio:1;border-radius:50%;background:#ffb35c;border:2px solid var(--ink);font-size:7px;font-weight:700;display:grid;place-items:center}
 
 /* sets arrive INTO the stage from the object that was chosen; the previous state leaves */
@@ -63,15 +59,9 @@ body.opening .objects a{animation:pop .5s var(--ease) both;animation-delay:calc(
 .sh-menu .menu-note{font-size:12px;color:var(--soft);margin:0}
 
 body.reduced *,body.reduced *::before{animation:none!important;transition:none!important}
+body.reduced.doors-in .objects a{opacity:1}
 @media (max-width:700px){
   .set-layer{padding:92px 12px 48px}
   #stage .set-layer canvas{max-height:52vh}
   .objects a.float{padding:6px 7px}
-}
-/* portrait phones: restage, don't shrink — the drawing is cropped around the Maker, floating doors move below it */
-@media (max-aspect-ratio:10/11){
-  .studio{display:block}
-  .comp{position:absolute;top:64px;left:50%;width:165vw;transform:translateX(-50%)}
-  body.in-set .studio{transform:scale(.86)}
-  .objects a.hot span{opacity:1;font-size:9px}
 }

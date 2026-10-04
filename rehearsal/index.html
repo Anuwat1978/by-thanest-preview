@@ -10,11 +10,10 @@
 <!-- ONE STAGE (DEC-020): every set arrives into this stage and the previous state leaves. The URL only records the state. -->
 <main id="stage" tabindex="-1" aria-label="By Thanest — the studio">
   <div id="studio" class="studio">
-    <div id="comp" class="comp">
-      <img id="studio-art" src="../art/ref_composition_v3.webp" alt="The Maker at his low table, writing, the box lid floating above his head.">
-      <div id="objects" class="objects" aria-label="Studio objects"></div>
-      <div id="residue" class="residue" hidden title="An escaped KHWAN segment">SEGMENT</div>
-    </div>
+    <!-- the studio IS Aoh's Maker page (ink loader → lid → lands on the head; original size, centred), embedded live -->
+    <iframe id="maker" class="maker" data-src="../index.html?embed" title="The Maker at his low table, writing" allow="autoplay"></iframe>
+    <div id="objects" class="objects" aria-label="Studio objects"></div>
+    <div id="residue" class="residue" hidden title="An escaped KHWAN segment">SEGMENT</div>
   </div>
   <div id="sets" class="sets"></div>
 </main>

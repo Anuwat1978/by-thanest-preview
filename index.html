@@ -88,7 +88,7 @@ input[type=range]{width:100%;accent-color:var(--ink)}
     </div>
     <div class="hint">ลากกล่อง = หมุนหัว · ลากฝา = ดึงฝา · ปุ่มแถวล่าง = เมนู</div>
     <div class="toast" id="toast" hidden></div>
-    <div class="stamp" id="stamp">อัปเดต 02/10 17:40</div>
+    <div class="stamp" id="stamp">อัปเดต 04/10 15:47</div>
   </div>
   <aside>
     <div><h1>Maker บนภาพจริง</h1><p class="sub">ตัว โต๊ะ แก้ว และลายบนกล่องกับฝา มาจาก Master Final ของ Aoh กล่องกับฝาเป็นสามมิติจริงที่แปะหน้ากล่องซึ่งคลี่ออกมาจากภาพ แท็บบนกล่องเอาออกแล้ว เมนูอยู่แถวล่างแทน ก้อนข้างในกับของที่ยื่นยังเป็นของชั่วคราว พฤติกรรมทั้งหมดเหมือน Behavior v2</p></div>
@@ -177,6 +177,12 @@ refImage.decode().then(()=>window.makerBoot.done(),()=>window.makerBoot.fail());
 addEventListener('error',e=>{if(!window.makerBoot.ready && (e.error || e.target?.tagName==='SCRIPT'))window.makerBoot.fail();},true);
 setTimeout(()=>{if(!window.makerBoot.ready&&!window.makerBoot.failed)document.getElementById('intro-status').innerHTML='กำลังโหลด… <a id="intro-retry" href="">ลองใหม่</a>';},15000);
 </script>
+<script>
+// Embedded as the studio of the one-stage Final (rehearsal/index.html): the Final owns navigation, so the page's own
+// menu, update stamp and skip button are hidden there. Nothing changes when the page is opened on its own.
+if (/[?&]embed\b/.test(location.search)) document.documentElement.classList.add('embed');
+</script>
+<style>html.embed .menu,html.embed .stamp,html.embed #intro-skip{display:none!important}</style>
 
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <script type="module">
