@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Print Screen Test</title>
+<!-- Lab test for Aoh (art direction is Aoh's alone, rule 9): a print dot screen applied in code over the new master.
+     The art stays clean. The screen is computed per frame and is fixed to the screen, so moving art passes under it. -->
+<style>
+:root{--ink:#2b182a;--panel:#fffaf0;--line:#2b182a}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#5e357e;font-family:system-ui,sans-serif;color:var(--ink)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:ew-resize}
+.panel{position:fixed;left:12px;bottom:12px;z-index:2;width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;
+  background:var(--panel);border:2px solid var(--line);padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:10px}
+.panel h1{font-size:14px;margin:0;letter-spacing:.06em}
+.panel.min > :not(.head){display:none}
+.head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.head button{border:2px solid var(--line);background:#fff;font:inherit;font-weight:700;padding:2px 8px;cursor:pointer}
+.row{display:flex;flex-direction:column;gap:5px}
+.row > span{font-weight:700}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{border:2px solid var(--line);background:#fff;font:inherit;padding:5px 8px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.sw{width:30px;height:30px;padding:0!important;border-radius:50%}
+.sw[aria-pressed=true]{outline:3px solid var(--ink);outline-offset:2px}
+input[type=range]{width:100%;accent-color:var(--ink)}
+label.chk{display:flex;gap:6px;align-items:center}
+.note{margin:0;color:#6b5a62;font-size:12px;line-height:1.5}
+.tag{position:fixed;top:10px;z-index:1;font:700 11px/1 system-ui;letter-spacing:.1em;background:var(--panel);border:2px solid var(--line);padding:5px 7px;pointer-events:none}
+#tagL{left:10px}#tagR{right:10px}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="The new master with a print dot screen. Drag to move the before/after line."></canvas>
+<div id="tagL" class="tag">ก่อน</div><div id="tagR" class="tag">หลัง: เม็ดสกรีน</div>
+<div class="panel" id="panel">
+  <div class="head"><h1>ทดลองเม็ดสกรีน (Print screen)</h1><button id="min" aria-expanded="true">ย่อ</button></div>
+  <div class="row"><span>แบบเม็ดสกรีน</span>
+    <div class="seg" id="mode">
+      <button data-v="2" aria-pressed="true">4 สีจริง (CMYK)</button>
+      <button data-v="1">สกรีนในสีเดิม</button>
+      <button data-v="3">ลายจุดทับ</button>
+    </div></div>
+  <div class="row"><span>สีพื้นหลัง (เทสี)</span><div class="seg" id="bg"></div></div>
+  <div class="row"><span>ขนาดเม็ด <output id="cellO"></output></span><input id="cell" type="range" min="3" max="16" step="0.5" value="6"></div>
+  <div class="row"><span>ความแรง <output id="amtO"></output></span><input id="amt" type="range" min="0" max="1" step="0.01" value="1"></div>
+  <div class="row"><span>สีเหลื่อม (misregistration) <output id="misO"></output></span><input id="mis" type="range" min="0" max="6" step="0.25" value="1.5"></div>
+  <div class="row"><span>ซูมดูเม็ด <output id="zoomO"></output></span><input id="zoom" type="range" min="1" max="4" step="0.1" value="1"></div>
+  <label class="chk"><input type="checkbox" id="solidK" checked> เส้นดำพิมพ์ทึบ (ไม่แตกเป็นเม็ด แบบโปสเตอร์จริง)</label>
+  <label class="chk"><input type="checkbox" id="grain" checked> เนื้อกระดาษ</label>
+  <label class="chk"><input type="checkbox" id="move"> ให้ตัวละครขยับ (ดูว่าเม็ดอยู่กับจอ)</label>
+  <p class="note">ลากบนภาพเพื่อเลื่อนเส้น ก่อน/หลัง ภาพต้นฉบับไม่ถูกแก้ เม็ดสกรีนคำนวณด้วยโค้ดทุกเฟรม ภาพทดสอบใช้ไฟล์จากแชต (1376×768) ไฟล์เต็มจะคมกว่านี้</p>
+</div>
+<script>
+const BGS=[['ม่วง','#5e357e'],['ชมพู','#e8457f'],['เหลือง','#f0b928'],['เขียวน้ำทะเล','#1f9e9c'],['ครีม','#f6e8cb'],['ขาว','#ffffff']];
+const S={mode:2,bg:'#5e357e',cell:6,amt:1,mis:1.5,zoom:1,solidK:1,grain:1,move:0,split:.5};
+const $=id=>document.getElementById(id);
+const cv=$('c'),gl=cv.getContext('webgl',{antialias:false,preserveDrawingBuffer:true});
+const VS='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+const FS=`precision highp float;
+uniform sampler2D uArt;uniform vec4 uRect;uniform vec2 uRes;uniform vec3 uBg;
+uniform float uMode,uCell,uAmt,uMis,uSplit,uGrain,uSolidK,uDpr;
+const vec3 PAPER=vec3(.985,.972,.94);
+const vec3 IC=vec3(.0,.62,.86),IM=vec3(.9,.06,.5),IY=vec3(1.,.9,.0),IK=vec3(.17,.09,.16);
+vec3 comp(vec2 p){vec2 uv=(p-uRect.xy)/uRect.zw;
+  if(uv.x<0.||uv.y<0.||uv.x>1.||uv.y>1.)return uBg;
+  vec4 a=texture2D(uArt,uv);return mix(uBg,a.rgb,a.a);}
+vec4 cmyk(vec3 c){float k=1.-max(max(c.r,c.g),c.b);float d=max(1.-k,1e-4);
+  return vec4((1.-c.r-k)/d,(1.-c.g-k)/d,(1.-c.b-k)/d,k);}
+mat2 rot(float a){float s=sin(a),c=cos(a);return mat2(c,-s,s,c);}
+// one halftone dot plate: rotated grid, the tone sampled at each cell centre, dot area = tone
+float plate(vec2 p,float ang,vec4 mask,vec2 off){
+  float s=uCell*uDpr;vec2 q=rot(ang)*(p-off);vec2 cc=(floor(q/s)+.5)*s;
+  vec2 cp=rot(-ang)*cc+off;float t=dot(cmyk(comp(cp-off)),mask);
+  t=clamp(t,0.,1.);float r=s*mix(sqrt(t/3.14159),.7071,smoothstep(.75,1.,t));float aa=.9; // dot area matches the tone
+  return 1.-smoothstep(r-aa,r+aa,length(q-cc));}
+float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+void main(){
+  vec2 p=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y);
+  vec3 o=comp(p);vec3 col=o;
+  if(p.x>=uSplit){
+    if(uMode>1.5&&uMode<2.5){ // 4-colour process print on paper
+      float m=uMis*uDpr;
+      float c=plate(p,.2618,vec4(1,0,0,0),vec2(m,0.));
+      float mg=plate(p,1.309,vec4(0,1,0,0),vec2(0.,m));
+      float y=plate(p,0.,vec4(0,0,1,0),vec2(-m*.6,-m*.4));
+      float k;
+      if(uSolidK>.5){k=smoothstep(.55,.75,cmyk(o).w);}else{k=plate(p,.7854,vec4(0,0,0,1),vec2(0.));}
+      vec3 pr=PAPER*mix(vec3(1.),IC,c)*mix(vec3(1.),IM,mg)*mix(vec3(1.),IY,y);
+      pr=mix(pr,IK,k*.96);
+      col=mix(o,pr,uAmt);
+    } else if(uMode<1.5){ // keep the palette: a darker dot of each colour, sized by tone
+      float s=uCell*uDpr;vec2 q=rot(.7854)*(p+vec2(uMis*uDpr));vec2 cc=(floor(q/s)+.5)*s;
+      vec3 cs=comp(rot(-.7854)*cc-vec2(uMis*uDpr));float t=1.-dot(cs,vec3(.3,.55,.15));
+      float r=s*clamp(.12+.42*sqrt(t),0.,.62);float d=1.-smoothstep(r-.9,r+.9,length(q-cc));
+      float cov=3.14159*r*r/(s*s);vec3 dk=col*.72;vec3 lt=min(col+(col-dk)*cov/max(1.-cov,.2),vec3(1.)); // the average stays the original colour
+      col=mix(o,mix(lt,dk,d),uAmt);
+    } else { // a plain dot pattern laid over everything
+      float s=uCell*uDpr;vec2 q=rot(.7854)*p;vec2 cc=(floor(q/s)+.5)*s;
+      float d=1.-smoothstep(s*.3-.9,s*.3+.9,length(q-cc));
+      col=mix(o,o*(1.-.22*d),uAmt);
+    }
+    if(uGrain>.5){float n=hash(floor(p/uDpr));float f=hash(floor(p/uDpr/vec2(9.,1.5)));
+      col*=1.-.07*n*uAmt-.03*f*uAmt;}
+  }
+  if(abs(p.x-uSplit)<1.5*uDpr)col=vec3(1.);
+  gl_FragColor=vec4(col,1.);}`;
+function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o;}
+const pg=gl.createProgram();gl.attachShader(pg,sh(gl.VERTEX_SHADER,VS));gl.attachShader(pg,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pg);gl.useProgram(pg);
+gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const loc=gl.getAttribLocation(pg,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+const U=n=>gl.getUniformLocation(pg,n);
+const img=new Image();img.src='../art/incoming/aoh-2026-10-04/master_print_v1_cut.png';
+let ready=false,dpr=1,t0=performance.now();
+img.onload=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);ready=true;draw();document.body.dataset.ready='1';};
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
+function draw(){if(!ready)return;
+  dpr=Math.min(devicePixelRatio||1,2);const W=Math.round(innerWidth*dpr),H=Math.round(innerHeight*dpr);
+  if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}gl.viewport(0,0,W,H);
+  const ar=img.width/img.height;let w=Math.min(W*.96,H*.96*ar)*S.zoom,h=w/ar;
+  const bob=S.move?Math.sin((performance.now()-t0)/600)*10*dpr:0,sway=S.move?Math.sin((performance.now()-t0)/1200)*14*dpr:0;
+  gl.uniform4f(U('uRect'),(W-w)/2+sway,(H-h)/2+bob,w,h);gl.uniform2f(U('uRes'),W,H);gl.uniform3f(U('uBg'),...hex(S.bg));
+  gl.uniform1f(U('uMode'),S.mode);gl.uniform1f(U('uCell'),S.cell);gl.uniform1f(U('uAmt'),S.amt);gl.uniform1f(U('uMis'),S.mis);
+  gl.uniform1f(U('uSplit'),S.split*W);gl.uniform1f(U('uGrain'),S.grain);gl.uniform1f(U('uSolidK'),S.solidK);gl.uniform1f(U('uDpr'),dpr);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);document.body.style.background=S.bg;
+  if(S.move&&!matchMedia('(prefers-reduced-motion: reduce)').matches)requestAnimationFrame(draw);}
+// controls
+const seg=(el,key,num)=>el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));S[key]=num?+b.dataset.v:b.dataset.v;draw();});
+BGS.forEach(([n,c])=>{const b=document.createElement('button');b.className='sw';b.dataset.v=c;b.title=n;b.setAttribute('aria-label',n);b.style.background=c;b.setAttribute('aria-pressed',c===S.bg);$('bg').append(b);});
+seg($('mode'),'mode',1);seg($('bg'),'bg',0);
+for(const k of ['cell','amt','mis','zoom']){const i=$(k),o=$(k+'O');const f=()=>{S[k]=+i.value;o.textContent=k==='amt'?Math.round(S[k]*100)+'%':k==='zoom'?S[k]+'×':S[k]+' px';draw();};i.addEventListener('input',f);f();}
+for(const k of ['solidK','grain']){$(k).addEventListener('change',e=>{S[k]=e.target.checked?1:0;draw();});}
+$('move').addEventListener('change',e=>{S.move=e.target.checked?1:0;draw();});
+$('min').addEventListener('click',()=>{const m=$('panel').classList.toggle('min');$('min').textContent=m?'ขยาย':'ย่อ';$('min').setAttribute('aria-expanded',!m);});
+let drag=false;const setSplit=e=>{S.split=Math.max(0,Math.min(1,e.clientX/innerWidth));draw();};
+cv.addEventListener('pointerdown',e=>{drag=true;cv.setPointerCapture(e.pointerId);setSplit(e);});
+cv.addEventListener('pointermove',e=>{if(drag)setSplit(e);});cv.addEventListener('pointerup',()=>drag=false);
+addEventListener('resize',draw);
+window.__print={S,draw};
+</script>
+</body></html>
