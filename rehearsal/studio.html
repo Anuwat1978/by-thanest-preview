@@ -76,13 +76,14 @@ Promise.all([load('master_print_v1_cut.png'),load('box_print_v1_noeyes.png'),loa
  .then(([m,b,sk,...p])=>{master=m;box=b;sockets=sk;puffs=p;base=true;['intro','write','notice'].forEach(frames);
    const all=F.intro.concat(F.write,F.notice);let k=0;const tick=()=>{progress=k/all.length;if(k===all.length)go();};
    all.forEach(im=>im.complete?++k:im.addEventListener('load',()=>{++k;tick();}));tick();});
-function go(){if(ready)return;ready=true;if(reduce){S.state='loop';S.t0=performance.now();}document.body.dataset.ready='1';frames('music');frames('startle');
+function go(){if(ready)return;ready=true;NOTICE_FRONT.forEach(frontFrame);if(reduce){S.state='loop';S.t0=performance.now();}document.body.dataset.ready='1';frames('music');frames('startle');
   if(reduce){window.__intro.active=false;}}
 const ease=t=>1-Math.pow(1-t,3),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const back=t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
 // a damped spring: starts at `from`, overshoots about 5% and settles at 1 (the physical pop Aoh asked for)
 const spring=(t,from=.12)=>t<0?from:1-(1-from)*Math.exp(-t*20)*Math.cos(t*22);
 const popXY=sy=>[1+(1-sy)*.45,sy];                       // squash-and-stretch: flat and wide, then tall and slim
+const NOTICE_FRONT=new Set([24,25,26,27,28,31,32,33,34,35,36,45,46,47,48]);   // keyed notice frames whose waving hand overlaps the box
 const TABLE_DODGE={from:29,hold:0.5,h:110};   // keyed frame where the table pops up (clip 007), seconds held up, px up
 const INTRO_START=0.98,INTRO_LEN=62/12,BAR={x:476,y:236,w:420,h:36},LOAD_MIN=1.8;
 function pose(now){
@@ -101,22 +102,27 @@ function pose(now){
       else{p.lid='closed';const q=clamp((t-0.7)/0.12,0,1);p.ly=-24*Math.sin(Math.PI*q);     // the knock
         if(t>=0.78){p.bs=1;[p.sx,p.sy]=popXY(spring(t-0.78,.03));}}                        // the box springs out of the lid
       return p;}
-    const ft=t-INTRO_START,i=2+Math.floor(ft*15.5);   // clip 007 from its first drawn frame; Aoh: 25–30% faster than the clip (12 → 15.5 fps)
+    const ft=t-INTRO_START,T1=(TABLE_DODGE.from-2)/17.05,i=ft<T1?2+Math.floor(ft*17.05):TABLE_DODGE.from+Math.floor((ft-T1)*13.95);   // Aoh: the body 10% faster, from the table on 10% slower (15.5 → 17 / 14 fps)
     p.pivot='top';const pe=te=>Math.max(0,spring(ft-te,0));p.eyes=[pe(0.05),pe(0.13)];                // the eye sockets pop out of the box
     if(i<62){p.clip='intro';p.fi=i;p.label='ฉากประกอบตัวเอง (คลิป 4)';
       const tr=TRACK.intro_assemble;
-      if(i<11){p.by=-230+Math.sin(ft*20)*3;}                                    // waiting in the air while the body springs in
-      else if(i<13){const q=(i-10)/3;p.by=-230+(tr[13][1]+230)*q*q;p.bx=tr[13][0]*q;}  // drops onto the collar
+      const LAND=5,tl=ft-(LAND-2)/17.05;                                        // Aoh: the head drops straight onto the body as it springs up
+      if(i<3){p.by=-230+Math.sin(ft*20)*3;}
+      else if(i<LAND){const q=clamp(((ft*17.05)-1)/(LAND-3),0,1);p.by=-230+(tr[LAND][1]+230)*q*q;p.bx=tr[LAND][0]*q;}
       else{p.bx=tr[i][0];p.by=tr[i][1];
+        if(tl>0&&tl<.7){p.by-=20*Math.exp(-7*tl)*Math.abs(Math.sin(17*tl));       // the head recoils up a little and settles
+          p.ly=-(16*Math.exp(-6*Math.max(0,tl-.04))*Math.abs(Math.sin(15*Math.max(0,tl-.04))));}   // the lid bounces a bit higher, a beat later
         // Aoh's gag: the table comes in late from above, so the finished head (box + lid) ducks UP out of its way, then drops back
-        const D=TABLE_DODGE,f=ft-(D.from-2)/15.5;
+        const D=TABLE_DODGE,f=ft-T1;
         if(f>0&&f<D.hold+.12){const up=f<.12?ease(f/.12):f<D.hold?1:1-(f-D.hold)/.12*(f-D.hold)/.12;   // whoosh up, hold while the table passes, drop
           p.by-=D.h*up;p.sy=1+.1*up*(f<.12?1:.4);p.sx=1-.06*up;p.br=-.07*up*Math.sin(f*9);}
         else if(f>=D.hold+.12&&f<D.hold+.6)[p.sx,p.sy]=popXY(spring(f-D.hold-.12,.84));}         // lands back on the collar with a squash  // rides the collar
       p.steam=i>=57;return p;}
     S.state='loop';S.t0=now;window.__intro.active=false;S.notice=true;S.nt0=now;}  // he notices you, then keeps writing
   // loops: writing, or the music groove; the notice clip plays once over them
-  if(S.notice){const i=Math.max(0,Math.floor((now-S.nt0)/1000*12));if(i>=62)S.notice=false;else{p.clip='notice';p.fi=i;p.label='อ้าว มาแล้วเหรอ (คลิป 3)';}}
+  if(S.notice){const i=Math.max(0,Math.floor((now-S.nt0)/1000*12));if(i>=62)S.notice=false;else{p.clip='notice';p.fi=i;p.label='อ้าว มาแล้วเหรอ (คลิป 3)';
+    const w=clamp((i-21)/4,0,1)*clamp((49-i)/4,0,1),wv=w*w*(3-2*w);p.sy=1+.07*wv;p.sx=1-.035*wv;p.wave=wv;   // Aoh: the head stretches up with the wave
+    if(NOTICE_FRONT.has(i))p.front=i;}}
   if(p.clip!=='notice'){const n=Math.floor(t*12)%122,i=n<62?n:122-n;p.clip=S.music?'music':'write';p.fi=i;p.label=S.music?'ฟังเพลง (คลิป 2) + หัวกล่องโยกตามจังหวะ':'เขียนงาน (คลิป 1)';}
   const tr=TRACK[TKEY[p.clip]][p.fi];p.bx=tr[0];p.by=tr[1];
   if(S.music&&p.clip==='music'){const beat=(now/1000)*96/60;p.by+=-4*Math.abs(Math.sin(beat*Math.PI));p.br=Math.sin(beat*Math.PI)*0.02;}
@@ -224,6 +230,7 @@ function drawPupils(now,p,ox,oy,only){
     if(sy>.5){cx.beginPath();cx.ellipse(-2,-PUP.ry*.45,2,3.4,-.3,0,Math.PI*2);cx.fillStyle='#fffaf0';cx.fill();}
     cx.restore();}
 }
+const FRONT={};function frontFrame(i){if(!FRONT[i]){const im=new Image();im.src=ART+'video/maker_notice_front/f'+String(2*i).padStart(3,'0')+'.webp';FRONT[i]=im;}return FRONT[i];}
 let puffList=[],lastPuff=0;
 function steam(now,on){
   if(on&&now-lastPuff>650){lastPuff=now;puffList.push({t0:now,im:puffs[Math.floor(Math.random()*3)],sx:(Math.random()-.5)*8,ph:Math.random()*6,r:(Math.random()-.5)*.6});}
@@ -243,7 +250,8 @@ function composite(p,now,scale){
     if(im&&im.complete&&im.naturalWidth){cx.save();cx.beginPath();cx.moveTo(0,-HEAD);cx.lineTo(MW,-HEAD);for(const [x,y] of RIM)cx.lineTo(x+p.bx,y+p.by);cx.closePath();cx.clip();
       const s=MON.s,K=MON.k*s,mw=MON.cutW*s;cx.translate(MON.cx+p.bx,MON.base-MON.full*s+p.by);
       cx.drawImage(im,-mw/2+(MON.crop[0]-MON.ox)*K,(MON.crop[1]-MON.oy)*K,MON.crop[2]*K,MON.crop[3]*K);cx.restore();}}
-  if(p.lid==='closed')drawClosedLid(p.bx,p.by+(p.ly||0));
+  if(p.lid==='closed')drawClosedLid(p.bx,p.by+(p.ly||0)-(p.pivot==='top'?0:box.height*((p.sy||1)-1)));   // the lid rides the stretched box top
+  if(p.front!=null){const im=frontFrame(p.front);if(im&&im.complete&&im.naturalWidth){const c=CLIPS.notice;cx.drawImage(im,c.x,c.y,im.width/1.5,im.height/1.5);}}  // the waving hand, in front of the box
   if(p.lid==='bar'||p.lid==='morph')drawLoader(p);
   if(p.lid==='fly'){cx.save();cx.translate(LIDR.x+LIDR.w/2+p.lx+p.bx,LIDR.y+LIDR.h/2+p.ly+p.by);cx.rotate(p.lr);
     cx.drawImage(master,LIDR.x,LIDR.y,LIDR.w,LIDR.h,-LIDR.w/2,-LIDR.h/2,LIDR.w,LIDR.h);cx.restore();}
