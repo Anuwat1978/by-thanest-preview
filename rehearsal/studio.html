@@ -83,6 +83,7 @@ const back=t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
 // a damped spring: starts at `from`, overshoots about 5% and settles at 1 (the physical pop Aoh asked for)
 const spring=(t,from=.12)=>t<0?from:1-(1-from)*Math.exp(-t*20)*Math.cos(t*22);
 const popXY=sy=>[1+(1-sy)*.45,sy];                       // squash-and-stretch: flat and wide, then tall and slim
+const TABLE_DODGE={from:26,hold:0.62,h:290};   // keyed frame where the table appears (clip 006), seconds held up, px up
 const INTRO_START=0.98,INTRO_LEN=62/12,BAR={x:476,y:236,w:420,h:36},LOAD_MIN=1.8;
 function pose(now){
   const t=Math.max(0,(now-S.t0)/1000);let p={clip:'write',fi:0,bx:0,by:0,bs:1,lid:'closed',lx:0,ly:0,lr:0,steam:true,label:'เขียนงาน (คลิป 1)',mon:null};
@@ -106,7 +107,12 @@ function pose(now){
       const tr=TRACK.intro_assemble;
       if(i<13){p.by=-230+Math.sin(ft*20)*3;}                                    // waiting in the air while the body tumbles in
       else if(i<15){const q=(i-12)/3;p.by=-230+(tr[15][1]+230)*q*q;p.bx=tr[15][0]*q;}  // drops onto the collar
-      else{p.bx=tr[i][0];p.by=tr[i][1];}                                        // rides the collar
+      else{p.bx=tr[i][0];p.by=tr[i][1];
+        // Aoh's gag: the table comes in late from above, so the finished head (box + lid) ducks UP out of its way, then drops back
+        const D=TABLE_DODGE,f=ft-(D.from-6)/15.5;
+        if(f>0&&f<D.hold+.12){const up=f<.12?ease(f/.12):f<D.hold?1:1-(f-D.hold)/.12*(f-D.hold)/.12;   // whoosh up, hold while the table passes, drop
+          p.by-=D.h*up;p.sy=1+.1*up*(f<.12?1:.4);p.sx=1-.06*up;p.br=-.07*up*Math.sin(f*9);}
+        else if(f>=D.hold+.12&&f<D.hold+.6)[p.sx,p.sy]=popXY(spring(f-D.hold-.12,.84));}         // lands back on the collar with a squash  // rides the collar
       p.steam=i>=57;return p;}
     S.state='loop';S.t0=now;S.landT=now;window.__intro.active=false;S.notice=true;S.nt0=now;}  // he notices you, then keeps writing
   // loops: writing, or the music groove; the notice clip plays once over them
