@@ -80,7 +80,7 @@ function go(){if(ready)return;ready=true;if(reduce){S.state='loop';S.t0=performa
   if(reduce){window.__intro.active=false;}}
 const ease=t=>1-Math.pow(1-t,3),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const back=t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
-const INTRO_START=0.85,INTRO_LEN=62/12,BAR={x:476,y:236,w:420,h:36},LOAD_MIN=1.8;
+const INTRO_START=1.05,INTRO_LEN=62/12,BAR={x:476,y:236,w:420,h:36},LOAD_MIN=1.8;
 function pose(now){
   const t=Math.max(0,(now-S.t0)/1000);let p={clip:'write',fi:0,bx:0,by:0,bs:1,lid:'closed',lx:0,ly:0,lr:0,steam:true,label:'เขียนงาน (คลิป 1)',mon:null};
   if(S.state==='load'){ // the ink loader fills with the real loading progress (at least LOAD_MIN s)
@@ -89,10 +89,10 @@ function pose(now){
   if(S.state==='intro'){
     p.steam=false;
     if(t<INTRO_START){ // the loader turns into the lid; the box pops up in mid-air to catch it; the lid slams on
-      p.clip=null;p.label='The loader becomes the lid';const k=clamp(t/0.35,0,1);p.bs=back(k);p.by=-230;
-      if(t<0.45){p.lid='morph';p.m=ease(t/0.45);}
-      else if(t<0.62){p.lid='closed';p.ly=-70*(1-clamp((t-0.45)/0.17,0,1)**2);}
-      else{p.lid='closed';const q=clamp((t-0.62)/0.2,0,1);p.bs=1+0.12*Math.sin(q*Math.PI);}
+      p.clip=null;p.label='The loader becomes the lid';const k=clamp((t-0.38)/0.3,0,1);p.bs=t<0.38?0:back(k);p.by=-230; // the box pops up once the lid has formed
+      if(t<0.65){p.lid='morph';p.m=ease(t/0.65);}
+      else if(t<0.82){p.lid='closed';p.ly=-70*(1-clamp((t-0.65)/0.17,0,1)**2);}
+      else{p.lid='closed';const q=clamp((t-0.82)/0.2,0,1);p.bs=1+0.12*Math.sin(q*Math.PI);}
       return p;}
     const ft=t-INTRO_START,i=Math.floor(ft*12);
     if(i<62){p.clip='intro';p.fi=i;p.label='ฉากประกอบตัวเอง (คลิป 4)';
@@ -122,16 +122,35 @@ function drawClosedLid(dx,dy){ // a flat lid that fits the box top in the same p
   face(T,'#f6e8cb');                                                       // top
 }
 function lidTop(dx,dy){const c=TOP.reduce((a,[x,y])=>[a[0]+x/4,a[1]+y/4],[0,0]);return TOP.map(([x,y])=>[c[0]+(x-c[0])*1.07+dx,c[1]+(y-c[1])*1.07+dy-14]);}
-function drawLoader(p){ // the ink loading bar; then its four corners travel to the lid's corners
-  const B=[[BAR.x,BAR.y],[BAR.x+BAR.w,BAR.y],[BAR.x+BAR.w,BAR.y+BAR.h],[BAR.x,BAR.y+BAR.h]],L=lidTop(0,-230-70),m=p.lid==='morph'?p.m:0;
-  const Q=B.map(([x,y],i)=>{const [lx,ly]=L[[0,1,2,3][i]];return [x+(lx-x)*m,y+(ly-y)*m];});
-  cx.lineJoin='round';cx.lineWidth=3.2;cx.strokeStyle='#2b182a';
-  cx.beginPath();Q.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.closePath();
-  cx.fillStyle=m>0?`rgb(${Math.round(94+(246-94)*m)},${Math.round(53+(232-53)*m)},${Math.round(126+(203-126)*m)})`:'#fffaf0';cx.fill();
-  if(!m){cx.save();cx.clip();cx.fillStyle='#5e357e';const fw=BAR.w*p.fill;cx.beginPath();cx.moveTo(BAR.x,BAR.y-2);   // ink with a wobbly wet edge
-    for(let y=0;y<=BAR.h+4;y+=3)cx.lineTo(BAR.x+fw+Math.sin(y*.7+performance.now()/90)*3,BAR.y-2+y);cx.lineTo(BAR.x,BAR.y+BAR.h+2);cx.fill();cx.restore();}
-  cx.lineWidth=4;cx.stroke();
-  if(!m){cx.fillStyle='#2b182a';cx.font='700 15px system-ui,sans-serif';cx.textAlign='center';cx.fillText('LOADING THE STUDIO',BAR.x+BAR.w/2,BAR.y+BAR.h+30);}}
+// The loader is a lid seen front-on: a cream tray (the base Aoh asked for) with a purple edge, and the ink slot in it.
+// Every face is a polygon, so on "morph" each corner travels to the matching corner of the lid (tray face → lid top,
+// purple edge → the lid's two sides), spinning and overshooting on the way: the loader literally becomes the lid.
+const PAD=12,EDGE=16;
+function loaderFaces(){const x0=BAR.x-PAD,y0=BAR.y-PAD,x1=BAR.x+BAR.w+PAD,y1=BAR.y+BAR.h+PAD,xm=(x0+x1)/2;
+  return {top:[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],s1:[[x0,y1],[xm,y1],[xm,y1+EDGE],[x0,y1+EDGE]],s2:[[xm,y1],[x1,y1],[x1,y1+EDGE],[xm,y1+EDGE]],
+    slot:[[BAR.x,BAR.y],[BAR.x+BAR.w,BAR.y],[BAR.x+BAR.w,BAR.y+BAR.h],[BAR.x,BAR.y+BAR.h]]};}
+function lidFaces(dx,dy){const T=lidTop(dx,dy),h=15,dn=([x,y])=>[x,y+h],c=T.reduce((a,[x,y])=>[a[0]+x/4,a[1]+y/4],[0,0]);
+  return {top:T,s1:[T[0],T[3],dn(T[3]),dn(T[0])],s2:[T[3],T[2],dn(T[2]),dn(T[3])],slot:T.map(([x,y])=>[c[0]+(x-c[0])*.02,c[1]+(y-c[1])*.02])};}
+function drawLoader(p){
+  const m=p.lid==='morph'?p.m:0,A=loaderFaces(),Bf=lidFaces(0,-230-70),now=performance.now();
+  const all=[...A.top,...A.s1,...A.s2],c0=all.reduce((a,[x,y])=>[a[0]+x/all.length,a[1]+y/all.length],[0,0]);
+  const spin=Math.sin(m*Math.PI)*0.9*(1-m*0.3),pop=1+Math.sin(m*Math.PI)*0.18;          // a spin and a pop on the way
+  const lerp=(F,G)=>F.map(([x,y],i)=>{let X=x+(G[i][0]-x)*m,Y=y+(G[i][1]-y)*m;const cx0=c0[0]+(m>0?(Bf.top[0][0]-c0[0])*m*0:0);
+    const cx1=c0[0]+((Bf.top.reduce((a,q)=>a+q[0]/4,0))-c0[0])*m,cy1=c0[1]+((Bf.top.reduce((a,q)=>a+q[1]/4,0))-c0[1])*m;
+    const dx=(X-cx1)*pop,dy=(Y-cy1)*pop,cs=Math.cos(spin),sn=Math.sin(spin);return [cx1+dx*cs-dy*sn,cy1+dx*sn+dy*cs];});
+  const F={top:lerp(A.top,Bf.top),s1:lerp(A.s1,Bf.s1),s2:lerp(A.s2,Bf.s2),slot:lerp(A.slot,Bf.slot)};
+  const poly=P=>{cx.beginPath();P.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.closePath();};
+  const mix=(a,b)=>`rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*m)).join(',')})`;
+  cx.lineJoin='round';cx.lineWidth=3.6;cx.strokeStyle='#2b182a';
+  poly(F.s1);cx.fillStyle='#5e357e';cx.fill();cx.stroke();
+  poly(F.s2);cx.fillStyle=mix([94,53,126],[230,214,180]);cx.fill();cx.stroke();
+  poly(F.top);cx.fillStyle='#f6e8cb';cx.fill();cx.stroke();
+  if(m<0.97){cx.save();cx.globalAlpha=1-m;poly(F.slot);cx.fillStyle='#fffaf0';cx.fill();cx.clip();
+    if(!m){cx.fillStyle='#5e357e';const fw=BAR.w*p.fill;cx.beginPath();cx.moveTo(BAR.x,BAR.y-2);   // ink with a wobbly wet edge
+      for(let y=0;y<=BAR.h+4;y+=3)cx.lineTo(BAR.x+fw+Math.sin(y*.7+now/90)*3,BAR.y-2+y);cx.lineTo(BAR.x,BAR.y+BAR.h+2);cx.fill();}
+    else{cx.fillStyle='#5e357e';cx.fill();}
+    cx.restore();cx.save();cx.globalAlpha=1-m;poly(F.slot);cx.lineWidth=3;cx.stroke();cx.restore();}
+  if(!m){cx.fillStyle='#2b182a';cx.font='700 15px system-ui,sans-serif';cx.textAlign='center';cx.fillText('LOADING THE STUDIO',BAR.x+BAR.w/2,BAR.y+BAR.h+PAD+EDGE+28);}}
 let puffList=[],lastPuff=0;
 function steam(now,on){
   if(on&&now-lastPuff>650){lastPuff=now;puffList.push({t0:now,im:puffs[Math.floor(Math.random()*3)],sx:(Math.random()-.5)*8,ph:Math.random()*6,r:(Math.random()-.5)*.6});}
@@ -177,7 +196,7 @@ const U=n=>gl.getUniformLocation(pg,n);
 const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
 for(const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,k,v);
 let lastLabel='',rect=[0,0,1,1],lastPose=null;
-function frame(now){
+function frame(now){if(S.freeze!=null)now=S.freeze;
   if(base){
     const dpr=Math.min(devicePixelRatio||1,2),W=Math.round(innerWidth*dpr),H=Math.round(innerHeight*dpr);
     if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}gl.viewport(0,0,W,H);
