@@ -1,14 +1,14 @@
 // By Thanest — journey rehearsal, ONE STAGE (DEC-020). Every set arrives into the stage from the object that was chosen;
 // the previous state leaves. The hash only records the state (Back, refresh and deep links stay real — Blueprint §2).
 // Set behaviour lives in ../rehearsal-lab/sets/*.js (tested modules). Stand-ins only — not art direction (rule 9).
-import * as khwanSet from '../rehearsal-lab/sets/khwan.js?v=202610051143';
-import * as coffeeSet from '../rehearsal-lab/sets/coffee.js?v=202610051143';
-import * as interactiveSet from '../rehearsal-lab/sets/interactive.js?v=202610051143';
-import * as filmSet from '../rehearsal-lab/sets/film.js?v=202610051143';
-import * as makingSet from '../rehearsal-lab/sets/making.js?v=202610051143';
-import * as pricingSet from '../rehearsal-lab/sets/pricing.js?v=202610051143';
-import * as contactSet from '../rehearsal-lab/sets/contact.js?v=202610051143';
-import * as editionsSet from '../rehearsal-lab/sets/editions.js?v=202610051143';
+import * as khwanSet from '../rehearsal-lab/sets/khwan.js?v=202610051155';
+import * as coffeeSet from '../rehearsal-lab/sets/coffee.js?v=202610051155';
+import * as interactiveSet from '../rehearsal-lab/sets/interactive.js?v=202610051155';
+import * as filmSet from '../rehearsal-lab/sets/film.js?v=202610051155';
+import * as makingSet from '../rehearsal-lab/sets/making.js?v=202610051155';
+import * as pricingSet from '../rehearsal-lab/sets/pricing.js?v=202610051155';
+import * as contactSet from '../rehearsal-lab/sets/contact.js?v=202610051155';
+import * as editionsSet from '../rehearsal-lab/sets/editions.js?v=202610051155';
 const $ = id => document.getElementById(id);
 
 // One visit's truth, owned by the journey (memory only; nothing personal is stored on the device unless the visitor chooses).
@@ -167,7 +167,8 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && !$('menu').hidden) 
 addEventListener('resize', () => { paintDoors(); paintResidue(); });
 
 // ---------------- sound + reduced motion ----------------
-async function applySound() { if (!soundOn || document.hidden) { if (audio) await audio.suspend(); return; } if (!audio) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw Error('Audio is not supported'); audio = new AC(); osc = audio.createOscillator(); gain = audio.createGain(); osc.frequency.value = 146.83; gain.gain.value = .012; osc.connect(gain).connect(audio.destination); osc.start(); } await audio.resume(); }
+async function applySound() { try { $('maker').contentWindow.__studio?.setMusic(soundOn && !document.hidden); } catch {} // sound on = the Maker's music groove
+  if (!soundOn || document.hidden) { if (audio) await audio.suspend(); return; } if (!audio) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw Error('Audio is not supported'); audio = new AC(); osc = audio.createOscillator(); gain = audio.createGain(); osc.frequency.value = 146.83; gain.gain.value = .012; osc.connect(gain).connect(audio.destination); osc.start(); } await audio.resume(); }
 function paintSound() { $('sound').textContent = soundOn ? 'Sound on' : 'Sound off'; $('sound').setAttribute('aria-pressed', String(soundOn)); }
 $('sound').onclick = async () => { soundOn = !soundOn; paintSound(); try { await applySound(); } catch { soundOn = false; paintSound(); say('Audio is unavailable. Everything else still works.'); } };
 document.addEventListener('visibilitychange', () => applySound().catch(() => {}));
