@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Final Scene Preview</title>
+<!-- Lab preview of the Final studio with the new art (art direction is Aoh's alone, rule 9).
+     Maker clips (MiniMax H3) keyed by tools/clip_to_frames.py play at 12 fps; the box head follows the tracked collar.
+     Here the box, lid, steam and monster are 2D stand-ins for the runtime pieces (the box and lid are 3D in the Final). -->
+<style>
+:root{--ink:#2b182a;--panel:#fffaf0}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#f6e8cb;font-family:system-ui,sans-serif;color:var(--ink)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.panel{position:fixed;left:12px;bottom:12px;z-index:2;width:min(330px,calc(100vw - 24px));background:var(--panel);border:2px solid var(--ink);
+  padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:10px}
+.panel h1{font-size:14px;margin:0;letter-spacing:.06em}
+.panel.min > :not(.head){display:none}
+.head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.row{display:flex;flex-direction:column;gap:5px}.row > span{font-weight:700}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+button{border:2px solid var(--ink);background:#fff;font:inherit;padding:5px 9px;cursor:pointer}
+button[aria-pressed=true]{background:var(--ink);color:#fff}
+.beat{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2;background:var(--panel);border:2px solid var(--ink);padding:6px 12px;font-weight:700;font-size:13px;letter-spacing:.04em;white-space:nowrap}
+.note{margin:0;color:#6b5a62;font-size:12px;line-height:1.5}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="The Maker's studio assembling itself, then the Maker writing at his low table"></canvas>
+<div class="beat" id="beat" role="status" aria-live="polite">กำลังโหลด…</div>
+<div class="panel" id="panel">
+  <div class="head"><h1>ตัวอย่างฉาก Final (ภาพชุดใหม่)</h1><button id="min" aria-expanded="true">ย่อ</button></div>
+  <div class="row"><span>จังหวะ</span>
+    <div class="seg"><button id="b-intro">▶ เริ่มใหม่ (ประกอบฉาก)</button><button id="b-music" aria-pressed="false">🎵 เพลง: ปิด</button>
+    <button id="b-notice">👋 มีคนเข้ามา</button><button id="b-monster">มอนสเตอร์สะดุ้ง</button></div></div>
+  <div class="row"><span>เม็ดสกรีน</span>
+    <div class="seg" id="dots"><button data-v="3" aria-pressed="true">ลายจุดทับ</button><button data-v="0">ปิด</button></div></div>
+  <p class="note">กล่อง ฝา ควัน และมอนสเตอร์ในหน้านี้เป็นตัวแทน 2D ตัวจริงใน Final กล่องกับฝาเป็น 3D ตากล่องยังไม่กะพริบ (รอทำชั้นตาด้วยโค้ด)</p>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const ART='../art/incoming/aoh-2026-10-04/';
+const MW=1376,MH=768,HEAD=300,CW=MW,CH=MH+HEAD;
+// clips: keyed frames (every 2nd frame of 24 fps = 12 fps), crop box in master px, frames saved at 1.5 px per master px
+const CLIPS={
+  intro:{dir:'video/intro_assemble/',x:200,y:0,n:62},
+  write:{dir:'video/maker_write/',x:280,y:150,n:62},
+  music:{dir:'video/maker_music/',x:280,y:150,n:62},
+  notice:{dir:'video/maker_notice/',x:220,y:60,n:62},
+  startle:{dir:'video/startle_minimax_h3/',n:62}};
+// the box head follows the collar, tracked in every clip frame (offset from the body plate's collar, master px)
+const TRACK={"maker_write":[[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,-0.5],[-0.5,-1.5],[-0.5,-1.5],[-0.5,-2.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-2.5],[-0.5,-1.5],[-0.5,-0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,1.0],[-0.5,1.0],[-0.5,0.5],[-0.5,-0.5],[-0.5,-0.5],[-0.5,-1.5],[-0.5,-2.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.0],[-0.5,-2.5],[-0.5,-1.5],[-0.5,-0.5],[-0.5,0.0],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,-0.5],[-0.5,-0.5],[-0.5,-1.5],[-0.5,-2.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-2.5],[-0.5,-2.5],[-0.5,-1.5],[-0.5,-0.5],[-0.5,-0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.0],[-0.5,-0.5],[-0.5,-1.5],[-0.5,-2.5],[-0.5,-2.5],[-0.5,-3.5],[-0.5,-3.5],[-0.5,-3.5]],"maker_music":[[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[1.0,0.5],[2.5,0.5],[4.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.5],[5.0,1.5],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.5],[5.0,1.5],[5.0,1.5],[5.0,1.5],[5.0,1.5],[5.0,1.5],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.0,1.0],[5.5,1.0],[5.5,1.0],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.5,1.5],[5.0,1.5],[4.0,1.0],[1.5,0.5],[0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5],[-0.5,0.5]],"maker_notice":[[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,2.5],[-1.0,2.5],[-6.0,-8.5],[-6.0,-14.5],[-6.0,-14.5],[-5.0,-6.5],[-5.0,-6.5],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-5.0,-7.0],[-4.5,-6.0],[-3.5,-4.0],[-2.5,-2.0],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5],[-1.0,0.5]],"intro_assemble":[[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-115.0,40.5],[-12.0,40.5],[-8.0,-18.0],[-8.5,-18.0],[-8.5,11.5],[-8.5,11.5],[-7.5,-6.0],[-7.0,-10.0],[-6.5,-10.0],[-6.5,-10.0],[-5.5,-3.0],[-5.0,0.0],[-3.0,6.0],[-3.0,6.0],[-3.0,6.0],[-5.0,-2.0],[-5.0,-2.0],[-5.0,-2.0],[-8.5,-5.0],[-8.5,-5.0],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5],[0.5,-0.5]]};
+const TKEY={intro:'intro_assemble',write:'maker_write',music:'maker_music',notice:'maker_notice'};
+const BOX={x:407,y:190};                                       // box cut-out position in master px
+const TOP=[[427,197],[606,189],[738,272],[545,293]];            // box top: back-left, back-right, right, front
+const RIM=[[1376,275],[732.5,275],[545,293],[427.5,202.5],[0,202.5]];
+const LIDR={x:430,y:40,w:370,h:140};                            // the flying lid art, cut from the master
+const CUP={x:837,y:378};
+// monster startle (three-quarter cut, registered via the video start frame)
+const MON={cx:592,base:290,s:205/490,full:660,k:1057/(560*4/3),ox:764*4/3,oy:390*4/3,crop:[700,0,1160,1440],cutW:742};
+const MSEQ=[];for(let i=0;i<=24;i+=2)MSEQ.push(i);for(let i=26;i<=38;i+=2)MSEQ.push(i);for(let i=40;i<=50;i+=2)MSEQ.push(i);for(let i=88;i<=122;i+=2)MSEQ.push(i);
+const S={state:'intro',t0:performance.now(),music:false,screen:1,dots:3,notice:false,nt0:0,monster:false,mt0:0};
+const load=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=ART+s;});
+const F={};let master,box,puffs=[],ready=false;
+function frames(name){if(F[name])return F[name];const c=CLIPS[name],a=[];
+  for(let i=0;i<124;i+=2){const im=new Image();im.src=ART+c.dir+'f'+String(i).padStart(3,'0')+'.webp';a.push(im);}return F[name]=a;}
+Promise.all([load('master_print_v1_cut.png'),load('box_print_v1_cut.png'),load('steam_puff_a.png'),load('steam_puff_b.png'),load('steam_puff_c.png')])
+ .then(([m,b,...p])=>{master=m;box=b;puffs=p;['intro','write'].forEach(frames);
+   const all=F.intro.concat(F.write);let k=0;all.forEach(im=>im.complete?++k:im.addEventListener('load',()=>{if(++k===all.length)go();}));if(k===all.length)go();});
+function go(){ready=true;S.t0=performance.now();document.body.dataset.ready='1';frames('music');frames('notice');frames('startle');}
+const ease=t=>1-Math.pow(1-t,3),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const back=t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
+const INTRO_START=1.0,INTRO_LEN=62/12;
+function pose(now){
+  const t=Math.max(0,(now-S.t0)/1000);let p={clip:'write',fi:0,bx:0,by:0,bs:1,lid:'closed',lx:0,ly:0,lr:0,steam:true,label:'เขียนงาน (คลิป 1)',mon:null};
+  if(S.state==='intro'){
+    p.steam=false;
+    if(t<INTRO_START){ // the box pops up in mid-air, then the lid flies in and slams on
+      p.clip=null;p.label='กล่องป๊อปขึ้นมารับฝา';const k=clamp(t/0.35,0,1);p.bs=t<0.15?0:back(k);p.by=-230;
+      if(t<0.8){p.lid='fly';const q=ease(clamp((t-0.35)/0.45,0,1));p.lx=260*(1-q);p.ly=-230-260*(1-q)+150;p.lr=-1.2*(1-q);}
+      else{p.lid='closed';const q=clamp((t-0.8)/0.2,0,1);p.bs=1+0.12*Math.sin(q*Math.PI);}
+      return p;}
+    const ft=t-INTRO_START,i=Math.floor(ft*12);
+    if(i<62){p.clip='intro';p.fi=i;p.label='ฉากประกอบตัวเอง (คลิป 4)';
+      const tr=TRACK.intro_assemble;
+      if(i<24){p.by=-230+Math.sin(ft*5)*4;}                                   // waiting in the air
+      else if(i<33){const q=clamp((i-24)/9,0,1);p.by=-230+(tr[33][1]+230)*q*q;p.bx=tr[33][0]*q;} // drops to meet the shirt
+      else{p.bx=tr[i][0];p.by=tr[i][1];}                                        // rides the collar
+      p.steam=i>=57;return p;}
+    S.state='loop';S.t0=now;}
+  // loops: writing, or the music groove; the notice clip plays once over them
+  if(S.notice){const i=Math.max(0,Math.floor((now-S.nt0)/1000*12));if(i>=62)S.notice=false;else{p.clip='notice';p.fi=i;p.label='อ้าว มาแล้วเหรอ (คลิป 3)';}}
+  if(p.clip!=='notice'){const i=Math.floor(t*12)%62;p.clip=S.music?'music':'write';p.fi=i;p.label=S.music?'ฟังเพลง (คลิป 2) + หัวกล่องโยกตามจังหวะ':'เขียนงาน (คลิป 1)';}
+  const tr=TRACK[TKEY[p.clip]][p.fi];p.bx=tr[0];p.by=tr[1];
+  if(S.music&&p.clip==='music'){const beat=(now/1000)*96/60;p.by+=-4*Math.abs(Math.sin(beat*Math.PI));p.br=Math.sin(beat*Math.PI)*0.02;}
+  if(S.monster){const i=Math.max(0,Math.floor((now-S.mt0)/1000*12)),n=MSEQ.length;
+    if(i>=n+6)S.monster=false;else{const fi=MSEQ[Math.min(i,n-1)];p.mon=fi;p.label='มอนสเตอร์สะดุ้ง (วิดีโอ MiniMax)';
+      const fly=fi>=26&&i<n?1:0;p.lid=fly?'fly':'closed';p.lx=300*fly;p.ly=-260*fly;p.lr=.35*fly;}}
+  return p;
+}
+const comp=document.createElement('canvas'),cx=comp.getContext('2d');
+function drawClosedLid(dx,dy){ // a flat lid that fits the box top in the same perspective (stand-in for the 3D lid)
+  const c=TOP.reduce((a,[x,y])=>[a[0]+x/4,a[1]+y/4],[0,0]),T=TOP.map(([x,y])=>[c[0]+(x-c[0])*1.07+dx,c[1]+(y-c[1])*1.07+dy-14]),h=15;
+  const face=(pts,fill)=>{cx.beginPath();pts.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.closePath();cx.fillStyle=fill;cx.fill();cx.stroke();};
+  cx.lineJoin='round';cx.lineWidth=3.2;cx.strokeStyle='#2b182a';
+  face([T[0],T[3],[T[3][0],T[3][1]+h],[T[0][0],T[0][1]+h]],'#5e357e');   // front-left side (purple, as the master lid)
+  face([T[3],T[2],[T[2][0],T[2][1]+h],[T[3][0],T[3][1]+h]],'#e6d6b4');   // front-right side
+  face(T,'#f6e8cb');                                                       // top
+}
+let puffList=[],lastPuff=0;
+function steam(now,on){
+  if(on&&now-lastPuff>650){lastPuff=now;puffList.push({t0:now,im:puffs[Math.floor(Math.random()*3)],sx:(Math.random()-.5)*8,ph:Math.random()*6,r:(Math.random()-.5)*.6});}
+  puffList=puffList.filter(q=>now-q.t0<2600);
+  for(const q of puffList){const k=(now-q.t0)/2600,sc=.1+.17*k,a=Math.min(1,k*5)*(1-k)*.95;if(!q.im)continue;
+    cx.save();cx.globalAlpha=a;cx.translate(CUP.x+q.sx+Math.sin(q.ph+k*5)*7*k,CUP.y-12-110*ease(k));cx.rotate(q.r*k);
+    cx.drawImage(q.im,-q.im.width*sc/2,-q.im.height*sc/2,q.im.width*sc,q.im.height*sc);cx.restore();}
+}
+function composite(p,now,scale){
+  cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,comp.width,comp.height);cx.setTransform(scale,0,0,scale,0,0);cx.translate(0,HEAD);
+  if(p.clip){const c=CLIPS[p.clip],im=F[p.clip]&&F[p.clip][p.fi];if(im&&im.complete&&im.naturalWidth)cx.drawImage(im,c.x,c.y,im.width/1.5,im.height/1.5);}
+  // the box head (cut from the master), riding the collar; it pops and squashes around its base
+  if(p.bs>0){cx.save();cx.translate(BOX.x+box.width/2+p.bx,BOX.y+box.height+p.by);cx.rotate(p.br||0);cx.scale(p.bs,1/Math.max(p.bs,.6)*(p.bs>1?.95:1));
+    cx.drawImage(box,-box.width/2,-box.height);cx.restore();}
+  if(p.mon!=null){const im=F.startle&&F.startle[MSEQ.indexOf(p.mon)];
+    if(im&&im.complete&&im.naturalWidth){cx.save();cx.beginPath();cx.moveTo(0,-HEAD);cx.lineTo(MW,-HEAD);for(const [x,y] of RIM)cx.lineTo(x+p.bx,y+p.by);cx.closePath();cx.clip();
+      const s=MON.s,K=MON.k*s,mw=MON.cutW*s;cx.translate(MON.cx+p.bx,MON.base-MON.full*s+p.by);
+      cx.drawImage(im,-mw/2+(MON.crop[0]-MON.ox)*K,(MON.crop[1]-MON.oy)*K,MON.crop[2]*K,MON.crop[3]*K);cx.restore();}}
+  if(p.bs>0&&p.lid==='closed')drawClosedLid(p.bx,p.by);
+  if(p.lid==='fly'){cx.save();cx.translate(LIDR.x+LIDR.w/2+p.lx+p.bx,LIDR.y+LIDR.h/2+p.ly+p.by);cx.rotate(p.lr);
+    cx.drawImage(master,LIDR.x,LIDR.y,LIDR.w,LIDR.h,-LIDR.w/2,-LIDR.h/2,LIDR.w,LIDR.h);cx.restore();}
+  steam(now,p.steam);
+}
+const cv=$('c'),gl=cv.getContext('webgl',{antialias:false,preserveDrawingBuffer:true});
+const FS=`precision highp float;
+uniform sampler2D uArt;uniform vec4 uRect;uniform vec2 uRes;uniform vec3 uBg;uniform float uOn,uDpr;
+vec3 comp(vec2 p){vec2 uv=(p-uRect.xy)/uRect.zw;if(uv.x<0.||uv.y<0.||uv.x>1.||uv.y>1.)return uBg;
+  vec4 a=texture2D(uArt,uv);return mix(uBg,a.rgb,a.a);}
+mat2 rot(float a){float s=sin(a),c=cos(a);return mat2(c,-s,s,c);}
+float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+void main(){vec2 p=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y);vec3 o=comp(p),col=o;
+  if(uOn>.5){ // DEC-022 update: the finer plain dot screen, 6 px, 45°, paper grain
+    float s=6.*uDpr;vec2 q=rot(.7854)*p;vec2 cc=(floor(q/s)+.5)*s;
+    float d=1.-smoothstep(s*.3-.9,s*.3+.9,length(q-cc));col=o*(1.-.22*d);
+    float n=hash(floor(p/uDpr)),f=hash(floor(p/uDpr/vec2(9.,1.5)));col*=1.-.07*n-.03*f;}
+  gl_FragColor=vec4(col,1.);}`;
+function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o;}
+const pg=gl.createProgram();gl.attachShader(pg,sh(gl.VERTEX_SHADER,'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'));gl.attachShader(pg,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pg);gl.useProgram(pg);
+gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const loc=gl.getAttribLocation(pg,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+const U=n=>gl.getUniformLocation(pg,n);
+const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+for(const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,k,v);
+let lastLabel='';
+function frame(now){
+  if(ready){
+    const dpr=Math.min(devicePixelRatio||1,2),W=Math.round(innerWidth*dpr),H=Math.round(innerHeight*dpr);
+    if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}gl.viewport(0,0,W,H);
+    const w=Math.min(W*.98,H*.98*CW/CH),h=w*CH/CW;
+    if(comp.width!==Math.round(w)||comp.height!==Math.round(h)){comp.width=Math.round(w);comp.height=Math.round(h);}
+    const p=pose(now);composite(p,now,comp.width/CW);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,comp);
+    gl.uniform4f(U('uRect'),(W-comp.width)/2,(H-comp.height)/2,comp.width,comp.height);gl.uniform2f(U('uRes'),W,H);
+    gl.uniform3f(U('uBg'),246/255,232/255,203/255);gl.uniform1f(U('uOn'),S.screen);gl.uniform1f(U('uDpr'),dpr);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    if(p.label!==lastLabel){lastLabel=p.label;$('beat').textContent=p.label;}
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+$('b-intro').onclick=()=>{S.state='intro';S.t0=performance.now();S.notice=S.monster=false;puffList=[];};
+$('b-music').onclick=e=>{S.music=!S.music;e.target.setAttribute('aria-pressed',S.music);e.target.textContent='🎵 เพลง: '+(S.music?'เปิด':'ปิด');};
+$('b-notice').onclick=()=>{if(S.state==='loop'){S.notice=true;S.nt0=performance.now();}};
+$('b-monster').onclick=()=>{if(S.state==='loop'){S.monster=true;S.mt0=performance.now();}};
+$('dots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('dots').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));S.screen=b.dataset.v==='0'?0:1;});
+$('min').addEventListener('click',()=>{const m=$('panel').classList.toggle('min');$('min').textContent=m?'ขยาย':'ย่อ';$('min').setAttribute('aria-expanded',!m);});
+window.__fp={S,pose};
+</script>
+</body></html>
