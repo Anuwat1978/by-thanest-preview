@@ -83,7 +83,7 @@ const back=t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
 // a damped spring: starts at `from`, overshoots about 5% and settles at 1 (the physical pop Aoh asked for)
 const spring=(t,from=.12)=>t<0?from:1-(1-from)*Math.exp(-t*20)*Math.cos(t*22);
 const popXY=sy=>[1+(1-sy)*.45,sy];                       // squash-and-stretch: flat and wide, then tall and slim
-const TABLE_DODGE={from:29,hold:0.55,h:230};   // keyed frame where the table pops up (clip 007), seconds held up, px up
+const TABLE_DODGE={from:29,hold:0.5,h:110};   // keyed frame where the table pops up (clip 007), seconds held up, px up
 const INTRO_START=0.98,INTRO_LEN=62/12,BAR={x:476,y:236,w:420,h:36},LOAD_MIN=1.8;
 function pose(now){
   const t=Math.max(0,(now-S.t0)/1000);let p={clip:'write',fi:0,bx:0,by:0,bs:1,lid:'closed',lx:0,ly:0,lr:0,steam:true,label:'เขียนงาน (คลิป 1)',mon:null};
@@ -114,16 +114,15 @@ function pose(now){
           p.by-=D.h*up;p.sy=1+.1*up*(f<.12?1:.4);p.sx=1-.06*up;p.br=-.07*up*Math.sin(f*9);}
         else if(f>=D.hold+.12&&f<D.hold+.6)[p.sx,p.sy]=popXY(spring(f-D.hold-.12,.84));}         // lands back on the collar with a squash  // rides the collar
       p.steam=i>=57;return p;}
-    S.state='loop';S.t0=now;S.landT=now;window.__intro.active=false;S.notice=true;S.nt0=now;}  // he notices you, then keeps writing
+    S.state='loop';S.t0=now;window.__intro.active=false;S.notice=true;S.nt0=now;}  // he notices you, then keeps writing
   // loops: writing, or the music groove; the notice clip plays once over them
   if(S.notice){const i=Math.max(0,Math.floor((now-S.nt0)/1000*12));if(i>=62)S.notice=false;else{p.clip='notice';p.fi=i;p.label='อ้าว มาแล้วเหรอ (คลิป 3)';}}
-  if(p.clip!=='notice'){const i=Math.floor(t*12)%62;p.clip=S.music?'music':'write';p.fi=i;p.label=S.music?'ฟังเพลง (คลิป 2) + หัวกล่องโยกตามจังหวะ':'เขียนงาน (คลิป 1)';}
+  if(p.clip!=='notice'){const n=Math.floor(t*12)%122,i=n<62?n:122-n;p.clip=S.music?'music':'write';p.fi=i;p.label=S.music?'ฟังเพลง (คลิป 2) + หัวกล่องโยกตามจังหวะ':'เขียนงาน (คลิป 1)';}
   const tr=TRACK[TKEY[p.clip]][p.fi];p.bx=tr[0];p.by=tr[1];
   if(S.music&&p.clip==='music'){const beat=(now/1000)*96/60;p.by+=-4*Math.abs(Math.sin(beat*Math.PI));p.br=Math.sin(beat*Math.PI)*0.02;}
   if(S.monster){const i=Math.max(0,Math.floor((now-S.mt0)/1000*12)),n=MSEQ.length;
     if(i>=n+6)S.monster=false;else{const fi=MSEQ[Math.min(i,n-1)];p.mon=fi;p.label='มอนสเตอร์สะดุ้ง (วิดีโอ MiniMax)';
       const fly=fi>=26&&i<n?1:0;p.lid=fly?'fly':'closed';p.lx=300*fly;p.ly=-260*fly;p.lr=.35*fly;}}
-  if(S.landT&&now-S.landT<600)p.land=spring((now-S.landT)/1000,.94);
   return p;
 }
 const comp=document.createElement('canvas'),cx=comp.getContext('2d');
@@ -174,10 +173,10 @@ function drawLoader(p){
   const faces=[ // [normal, corners, fill]
     [[0,0,1],[[-X,-Y,Z],[X,-Y,Z],[X,Y,Z],[-X,Y,Z]],'#f6e8cb','top'],
     [[0,0,-1],[[-X,Y,-Z],[X,Y,-Z],[X,-Y,-Z],[-X,-Y,-Z]],'#e6d6b4'],
-    [[0,1,0],[[-X,Y,Z],[X,Y,Z],[X,Y,-Z],[-X,Y,-Z]],mix([94,53,126],[230,214,180],m)],
+    [[0,1,0],[[-X,Y,Z],[X,Y,Z],[X,Y,-Z],[-X,Y,-Z]],mix([168,155,139],[230,214,180],m)],
     [[0,-1,0],[[X,-Y,Z],[-X,-Y,Z],[-X,-Y,-Z],[X,-Y,-Z]],'#e6d6b4'],
-    [[-1,0,0],[[-X,-Y,Z],[-X,Y,Z],[-X,Y,-Z],[-X,-Y,-Z]],'#5e357e'],
-    [[1,0,0],[[X,Y,Z],[X,-Y,Z],[X,-Y,-Z],[X,Y,-Z]],'#5e357e']];
+    [[-1,0,0],[[-X,-Y,Z],[-X,Y,Z],[-X,Y,-Z],[-X,-Y,-Z]],mix([168,155,139],[94,53,126],m)],
+    [[1,0,0],[[X,Y,Z],[X,-Y,Z],[X,-Y,-Z],[X,Y,-Z]],mix([168,155,139],[94,53,126],m)]];
   const poly=P=>{cx.beginPath();P.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.closePath();};
   cx.lineJoin='round';cx.strokeStyle='#2b182a';
   for(const [n,C,fill,tag] of faces){const N=v3rot(n,flip,roll,yaw);if(N[0]*view[0]+N[1]*view[1]+N[2]*view[2]<=1e-3)continue;
