@@ -36,7 +36,7 @@ label.chk{display:flex;gap:6px;align-items:center}
   <div class="row"><span>มุมมอนสเตอร์</span>
     <div class="seg" id="view"><button data-v="q34" aria-pressed="true">เฉียง 3/4 (หันขวาตามกล่อง)</button><button data-v="front">หน้าตรง (เดิม)</button></div></div>
   <div class="row"><span>จังหวะ</span>
-    <div class="seg" id="beats"><button data-v="play" aria-pressed="true">เล่นวน ▶</button><button data-v="hide">ซ่อน</button><button data-v="peek">แอบมอง</button><button data-v="full">โผล่เต็มตัว</button></div></div>
+    <div class="seg" id="beats"><button data-v="play" aria-pressed="true">เล่นวน ▶</button><button data-v="hide">ซ่อน</button><button data-v="peek">แอบมอง</button><button data-v="full">โผล่เต็มตัว</button><button data-v="startle">สะดุ้ง (วิดีโอ MiniMax ดิบ)</button></div></div>
   <div class="row"><span>เม็ดสกรีน</span>
     <div class="seg" id="dots"><button data-v="3" aria-pressed="true">ลายจุดทับ (เม็ดเล็ก)</button><button data-v="1">สกรีนในสีเดิม</button><button data-v="0">ปิด</button></div></div>
   <p class="note">ภาพทดสอบจากแชต ตัวจริงกล่องกับฝาจะเป็น 3D ผนังกล่องบังตัวมอนสเตอร์เอง ส่วนนี้คือการดูขนาดและจังหวะเท่านั้น</p>
@@ -58,10 +58,18 @@ const RISE={hide:-40,get peek(){return ART2[S.view].peek;},get full(){return ART
 const S={size:'M',view:'q34',mode:'play',screen:1,dots:3,t0:performance.now()};
 // --- timeline (seconds, loops): hide → peek + look around → duck → pop out with the lid flying → bob → duck
 const TL=[[0,'hide'],[1,'peek'],[3.6,'hide'],[4.8,'full'],[8.4,'hide'],[10,'hide']];
-const LABEL={hide:'ซ่อนอยู่ในกล่อง',peek:'แอบมอง (ตาโผล่ ฝาแง้ม)',full:'โผล่เต็มตัว (ฝาเด้งออก)'};
+const LABEL={startle:'สะดุ้ง: วิดีโอ MiniMax H3 ดิบ 12 fps (ยังไม่ได้เจนเฟรมให้คม)',hide:'ซ่อนอยู่ในกล่อง',peek:'แอบมอง (ตาโผล่ ฝาแง้ม)',full:'โผล่เต็มตัว (ฝาเด้งออก)'};
 const ease=t=>1-Math.pow(1-t,3), back=t=>{const c=1.9;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
+// --- the startle clip (MiniMax H3, Aoh 2026-10-05): every 2nd video frame = 12 fps; the long hold of the take is trimmed
+const VID={dir:'video/startle_minimax_h3/',seq:[...range(0,24),...range(26,38),...range(40,50),...range(88,122)],
+  // video px → three-quarter cut px: the start frame put the cut 560 px tall at (764,390) of 1920×1080; the video is 2560×1440
+  k:1057/(560*4/3),ox:764*4/3,oy:390*4/3,crop:[700,0,1160,1440]};
+function range(a,b){const r=[];for(let i=a;i<=b;i+=2)r.push(i);return r;}
+const vframes={};
 function pose(t){ // returns {rise, dx, rot, lidY, lidX, lidR, beat}
   let beat,from,to,k;
+  if(S.mode==='startle'){const n=VID.seq.length,i=Math.floor(t*12)%(n+8),fi=VID.seq[Math.min(i,n-1)],g=WIDTH[S.size]/WIDTH.M,fly=fi>=32&&fi<92?1:0;
+    return {rise:RISE.full,dx:0,rot:0,lidY:-250*g*fly,lidX:280*g*fly,lidR:.3*fly,beat:'startle',bob:0,frame:fi};}
   if(S.mode!=='play'){beat=S.mode;from=to=S.mode;k=1;t=t%10;}
   else{t=t%10;let i=0;while(i<TL.length-1&&t>=TL[i+1][0])i++;beat=TL[i][1];from=i?TL[i-1][1]:'hide';to=beat;
     const dur=to==='hide'?.22:to==='full'?.55:.6;k=Math.min(1,(t-TL[i][0])/dur);}
@@ -76,6 +84,7 @@ function pose(t){ // returns {rise, dx, rot, lidY, lidX, lidR, beat}
 const load=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=ART+s;});
 let master,mons={},ready=false;
 Promise.all([load('master_print_v1_cut.png'),load(ART2.q34.src),load(ART2.front.src)]).then(([a,b,c])=>{master=a;mons={q34:b,front:c};ready=true;document.body.dataset.ready='1';});
+function loadVideo(){if(Object.keys(vframes).length)return;for(const fi of VID.seq){const i=new Image();i.src=ART+VID.dir+'f'+String(fi).padStart(3,'0')+'.webp';vframes[fi]=i;}}
 // --- composite (2D) → print screen (WebGL)
 const comp=document.createElement('canvas'),cx=comp.getContext('2d');
 function composite(p,scale){
@@ -88,7 +97,12 @@ function composite(p,scale){
   // the monster, shown only above the near rim of the box
   const monster=mons[S.view],s=scaleOf(),mw=monster.width*s,mh=monster.height*s;
   cx.save();cx.beginPath();cx.moveTo(0,-HEAD);cx.lineTo(MW,-HEAD);for(const [x,y] of RIM)cx.lineTo(x,y);cx.closePath();cx.clip();
-  cx.translate(MON.cx+p.dx,MON.base-p.rise*s+p.bob);cx.rotate(p.rot);cx.drawImage(monster,-mw/2,0,mw,mh);cx.restore();
+  cx.translate(MON.cx+p.dx,MON.base-p.rise*s+p.bob);cx.rotate(p.rot);
+  const vf=p.frame!=null&&vframes[p.frame];
+  if(vf&&vf.complete&&vf.naturalWidth){const [x0,y0,w,h]=VID.crop,K=VID.k*s; // the video frame, registered to the three-quarter cut
+    cx.drawImage(vf,-mw/2+(x0-VID.ox)*K,(y0-VID.oy)*K,w*K,h*K);}
+  else cx.drawImage(monster,-mw/2,0,mw,mh);
+  cx.restore();
 }
 const cv=$('c'),gl=cv.getContext('webgl',{antialias:false,preserveDrawingBuffer:true});
 const FS=`precision highp float;
@@ -137,7 +151,7 @@ function frame(){
 }
 requestAnimationFrame(frame);
 const seg=(el,fn)=>el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));fn(b.dataset.v);});
-seg($('size'),v=>S.size=v);seg($('view'),v=>S.view=v);seg($('beats'),v=>{S.mode=v;S.t0=performance.now();});
+seg($('size'),v=>S.size=v);seg($('view'),v=>S.view=v);seg($('beats'),v=>{S.mode=v;S.t0=performance.now();if(v==='startle'){S.view='q34';loadVideo();}});
 seg($('dots'),v=>{S.screen=v==='0'?0:1;if(v!=='0')S.dots=+v;});
 $('min').addEventListener('click',()=>{const m=$('panel').classList.toggle('min');$('min').textContent=m?'ขยาย':'ย่อ';$('min').setAttribute('aria-expanded',!m);});
 window.__stage={S,pose};
