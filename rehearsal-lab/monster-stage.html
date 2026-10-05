@@ -35,7 +35,8 @@ label.chk{display:flex;gap:6px;align-items:center}
     <div class="seg" id="size"><button data-v="S">เล็ก</button><button data-v="M" aria-pressed="true">กลาง</button><button data-v="L">ใหญ่</button></div></div>
   <div class="row"><span>จังหวะ</span>
     <div class="seg" id="beats"><button data-v="play" aria-pressed="true">เล่นวน ▶</button><button data-v="hide">ซ่อน</button><button data-v="peek">แอบมอง</button><button data-v="full">โผล่เต็มตัว</button></div></div>
-  <label class="chk"><input type="checkbox" id="screen" checked> เม็ดสกรีน (แบบที่เลือก)</label>
+  <div class="row"><span>เม็ดสกรีน</span>
+    <div class="seg" id="dots"><button data-v="3" aria-pressed="true">ลายจุดทับ (เม็ดเล็ก)</button><button data-v="1">สกรีนในสีเดิม</button><button data-v="0">ปิด</button></div></div>
   <p class="note">ภาพทดสอบจากแชต ตัวจริงกล่องกับฝาจะเป็น 3D ผนังกล่องบังตัวมอนสเตอร์เอง ส่วนนี้คือการดูขนาดและจังหวะเท่านั้น</p>
 </div>
 <script>
@@ -48,7 +49,7 @@ const LID={x:430,y:40,w:370,h:140};                                      // the 
 const MON={cx:592,base:290,body:820};                                    // opening centre, rim height under it, body width in monster px
 const SIZES={S:150/820,M:205/820,L:265/820};                             // head-body width on the box: about 150 / 205 / 265 master px
 const RISE={hide:-40,peek:430,full:1170};                                // monster px shown above the rim (eyes only / head-body out)
-const S={size:'M',mode:'play',screen:1,t0:performance.now()};
+const S={size:'M',mode:'play',screen:1,dots:3,t0:performance.now()};
 // --- timeline (seconds, loops): hide → peek + look around → duck → pop out with the lid flying → bob → duck
 const TL=[[0,'hide'],[1,'peek'],[3.6,'hide'],[4.8,'full'],[8.4,'hide'],[10,'hide']];
 const LABEL={hide:'ซ่อนอยู่ในกล่อง',peek:'แอบมอง (ตาโผล่ ฝาแง้ม)',full:'โผล่เต็มตัว (ฝาเด้งออก)'};
@@ -85,14 +86,18 @@ function composite(p,scale){
 }
 const cv=$('c'),gl=cv.getContext('webgl',{antialias:false,preserveDrawingBuffer:true});
 const FS=`precision highp float;
-uniform sampler2D uArt;uniform vec4 uRect;uniform vec2 uRes;uniform vec3 uBg;uniform float uOn,uDpr;
+uniform sampler2D uArt;uniform vec4 uRect;uniform vec2 uRes;uniform vec3 uBg;uniform float uOn,uDpr,uMode;
 const vec3 PAPER=vec3(.985,.972,.94);const float CELL=6.,MIS=1.5;
 vec3 comp(vec2 p){vec2 uv=(p-uRect.xy)/uRect.zw;if(uv.x<0.||uv.y<0.||uv.x>1.||uv.y>1.)return uBg;
   vec4 a=texture2D(uArt,uv);return mix(uBg,a.rgb,a.a);}
 mat2 rot(float a){float s=sin(a),c=cos(a);return mat2(c,-s,s,c);}
 float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 void main(){vec2 p=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y);vec3 o=comp(p),col=o;
-  if(uOn>.5){ // DEC-022: palette-keeping screen, 6 px, 45°, 1.5 px misregistration, paper grain
+  if(uOn>.5&&uMode>2.5){ // Aoh 2026-10-05: the finer plain dot screen ("ลายจุดทับ"), 6 px, 45°, paper grain
+    float s=CELL*uDpr;vec2 q=rot(.7854)*p;vec2 cc=(floor(q/s)+.5)*s;
+    float d=1.-smoothstep(s*.3-.9,s*.3+.9,length(q-cc));col=o*(1.-.22*d);
+    float n=hash(floor(p/uDpr)),f=hash(floor(p/uDpr/vec2(9.,1.5)));col*=1.-.07*n-.03*f;}
+  else if(uOn>.5){ // DEC-022 first choice: palette-keeping screen, 6 px, 45°, 1.5 px misregistration, paper grain
     float s=CELL*uDpr;vec2 q=rot(.7854)*(p+vec2(MIS*uDpr));vec2 cc=(floor(q/s)+.5)*s;
     vec3 cs=comp(rot(-.7854)*cc-vec2(MIS*uDpr));float t=1.-dot(cs,vec3(.3,.55,.15));
     float r=s*clamp(.12+.42*sqrt(t),0.,.62);float d=1.-smoothstep(r-.9,r+.9,length(q-cc));
@@ -118,7 +123,7 @@ function frame(){
     composite(p,comp.width/CW);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,comp);
     gl.uniform4f(U('uRect'),(W-comp.width)/2,(H-comp.height)/2,comp.width,comp.height);gl.uniform2f(U('uRes'),W,H);
-    gl.uniform3f(U('uBg'),246/255,232/255,203/255);gl.uniform1f(U('uOn'),S.screen);gl.uniform1f(U('uDpr'),dpr);
+    gl.uniform3f(U('uBg'),246/255,232/255,203/255);gl.uniform1f(U('uOn'),S.screen);gl.uniform1f(U('uMode'),S.dots);gl.uniform1f(U('uDpr'),dpr);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     if(p.beat!==lastBeat){lastBeat=p.beat;$('beat').textContent=LABEL[p.beat];}
   }
@@ -127,7 +132,7 @@ function frame(){
 requestAnimationFrame(frame);
 const seg=(el,fn)=>el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));fn(b.dataset.v);});
 seg($('size'),v=>S.size=v);seg($('beats'),v=>{S.mode=v;S.t0=performance.now();});
-$('screen').addEventListener('change',e=>S.screen=e.target.checked?1:0);
+seg($('dots'),v=>{S.screen=v==='0'?0:1;if(v!=='0')S.dots=+v;});
 $('min').addEventListener('click',()=>{const m=$('panel').classList.toggle('min');$('min').textContent=m?'ขยาย':'ย่อ';$('min').setAttribute('aria-expanded',!m);});
 window.__stage={S,pose};
 </script>
