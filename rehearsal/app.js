@@ -1,14 +1,14 @@
 // By Thanest — journey rehearsal, ONE STAGE (DEC-020). Every set arrives into the stage from the object that was chosen;
 // the previous state leaves. The hash only records the state (Back, refresh and deep links stay real — Blueprint §2).
 // Set behaviour lives in ../rehearsal-lab/sets/*.js (tested modules). Stand-ins only — not art direction (rule 9).
-import * as khwanSet from '../rehearsal-lab/sets/khwan.js?v=202610051314';
-import * as coffeeSet from '../rehearsal-lab/sets/coffee.js?v=202610051314';
-import * as interactiveSet from '../rehearsal-lab/sets/interactive.js?v=202610051314';
-import * as filmSet from '../rehearsal-lab/sets/film.js?v=202610051314';
-import * as makingSet from '../rehearsal-lab/sets/making.js?v=202610051314';
-import * as pricingSet from '../rehearsal-lab/sets/pricing.js?v=202610051314';
-import * as contactSet from '../rehearsal-lab/sets/contact.js?v=202610051314';
-import * as editionsSet from '../rehearsal-lab/sets/editions.js?v=202610051314';
+import * as khwanSet from '../rehearsal-lab/sets/khwan.js?v=202610051326';
+import * as coffeeSet from '../rehearsal-lab/sets/coffee.js?v=202610051326';
+import * as interactiveSet from '../rehearsal-lab/sets/interactive.js?v=202610051326';
+import * as filmSet from '../rehearsal-lab/sets/film.js?v=202610051326';
+import * as makingSet from '../rehearsal-lab/sets/making.js?v=202610051326';
+import * as pricingSet from '../rehearsal-lab/sets/pricing.js?v=202610051326';
+import * as contactSet from '../rehearsal-lab/sets/contact.js?v=202610051326';
+import * as editionsSet from '../rehearsal-lab/sets/editions.js?v=202610051326';
 const $ = id => document.getElementById(id);
 
 // One visit's truth, owned by the journey (memory only; nothing personal is stored on the device unless the visitor chooses).
@@ -163,6 +163,9 @@ addEventListener('popstate', () => show(parseRoute()));
 addEventListener('hashchange', () => { if (parseRoute() !== route) show(parseRoute()); });
 $('back').onclick = () => { if (history.state?.rehearsalIndex > 0) history.back(); else go('studio'); };
 $('menu-btn').onclick = () => setMenu($('menu').hidden);
+// TEMPORARY (Aoh review): replay the opening from the loader without a page reload. Remove when the Final is signed off.
+$('replay').onclick = () => { setMenu(false); if (route !== 'studio') go('studio'); const f = $('maker'); document.body.classList.remove('doors-in');
+  f.src = f.dataset.src + '&r=' + Date.now(); opening = true; generation++; say('Loading the studio…'); record('opening-start', 'replay'); watchLanding(generation); };
 addEventListener('keydown', e => { if (e.key === 'Escape' && !$('menu').hidden) { setMenu(false); $('menu-btn').focus(); } });
 addEventListener('resize', () => { paintDoors(); paintResidue(); });
 
