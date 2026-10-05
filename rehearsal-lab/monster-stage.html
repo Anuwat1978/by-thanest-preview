@@ -33,6 +33,8 @@ label.chk{display:flex;gap:6px;align-items:center}
   <div class="head"><h1>ทดลองมอนสเตอร์โผล่จากกล่อง</h1><button id="min" aria-expanded="true">ย่อ</button></div>
   <div class="row"><span>ขนาดมอนสเตอร์</span>
     <div class="seg" id="size"><button data-v="S">เล็ก</button><button data-v="M" aria-pressed="true">กลาง</button><button data-v="L">ใหญ่</button></div></div>
+  <div class="row"><span>มุมมอนสเตอร์</span>
+    <div class="seg" id="view"><button data-v="q34" aria-pressed="true">เฉียง 3/4 (หันขวาตามกล่อง)</button><button data-v="front">หน้าตรง (เดิม)</button></div></div>
   <div class="row"><span>จังหวะ</span>
     <div class="seg" id="beats"><button data-v="play" aria-pressed="true">เล่นวน ▶</button><button data-v="hide">ซ่อน</button><button data-v="peek">แอบมอง</button><button data-v="full">โผล่เต็มตัว</button></div></div>
   <div class="row"><span>เม็ดสกรีน</span>
@@ -46,10 +48,14 @@ const ART='../art/incoming/aoh-2026-10-04/';
 const MW=1376,MH=768,HEAD=360,CW=MW,CH=MH+HEAD;
 const RIM=[[1376,275],[732.5,275],[545,293],[427.5,202.5],[0,202.5]]; // near rim of the box opening: the monster shows above it
 const LID={x:430,y:40,w:370,h:140};                                      // the floating lid, lifted as its own piece
-const MON={cx:592,base:290,body:820};                                    // opening centre, rim height under it, body width in monster px
-const SIZES={S:150/820,M:205/820,L:265/820};                             // head-body width on the box: about 150 / 205 / 265 master px
-const RISE={hide:-40,peek:430,full:1170};                                // monster px shown above the rim (eyes only / head-body out)
-const S={size:'M',mode:'play',screen:1,dots:3,t0:performance.now()};
+const MON={cx:592,base:290};                                             // opening centre and the rim height under it (master px)
+// per drawing: head-body width and how much shows above the rim (eyes only / head-body out), in that drawing's own px
+const ART2={q34:{src:'monster_34_v1_cut.png',body:490,peek:260,full:660},   // three-quarter, facing right like the box (Aoh 2026-10-05)
+            front:{src:'monster_print_v1_cut.png',body:820,peek:430,full:1170}};
+const WIDTH={S:150,M:205,L:265};                                         // head-body width on the box, in master px
+const scaleOf=()=>WIDTH[S.size]/ART2[S.view].body;
+const RISE={hide:-40,get peek(){return ART2[S.view].peek;},get full(){return ART2[S.view].full;}};
+const S={size:'M',view:'q34',mode:'play',screen:1,dots:3,t0:performance.now()};
 // --- timeline (seconds, loops): hide → peek + look around → duck → pop out with the lid flying → bob → duck
 const TL=[[0,'hide'],[1,'peek'],[3.6,'hide'],[4.8,'full'],[8.4,'hide'],[10,'hide']];
 const LABEL={hide:'ซ่อนอยู่ในกล่อง',peek:'แอบมอง (ตาโผล่ ฝาแง้ม)',full:'โผล่เต็มตัว (ฝาเด้งออก)'};
@@ -63,13 +69,13 @@ function pose(t){ // returns {rise, dx, rot, lidY, lidX, lidR, beat}
   const rise=RISE[from]+(RISE[to]-RISE[from])*f;
   let dx=0,rot=0,lidY=0,lidX=0,lidR=0;
   if(beat==='peek'){dx=Math.sin(t*2.2)*7*k;rot=Math.sin(t*2.2+.6)*.05*k;lidY=-16*k+Math.sin(t*9)*1.5;}
-  if(beat==='full'){const g=SIZES[S.size]/SIZES.M;rot=Math.sin(t*3.6)*.025;lidY=-170*g*ease(k);lidX=(70+150*(g-1)+40)*ease(k);lidR=.22*ease(k);} // the lid clears the bigger monster
+  if(beat==='full'){const g=WIDTH[S.size]/WIDTH.M;rot=Math.sin(t*3.6)*.025;lidY=-170*g*ease(k);lidX=(70+150*(g-1)+40)*ease(k);lidR=.22*ease(k);} // the lid clears the bigger monster
   return {rise:Math.max(rise,RISE.hide),dx,rot,lidY,lidX,lidR,beat,bob:beat==='full'?Math.abs(Math.sin(t*3.6))*-6:0};
 }
 // --- images
 const load=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=ART+s;});
-let master,monster,ready=false;
-Promise.all([load('master_print_v1_cut.png'),load('monster_print_v1_cut.png')]).then(([a,b])=>{master=a;monster=b;ready=true;document.body.dataset.ready='1';});
+let master,mons={},ready=false;
+Promise.all([load('master_print_v1_cut.png'),load(ART2.q34.src),load(ART2.front.src)]).then(([a,b,c])=>{master=a;mons={q34:b,front:c};ready=true;document.body.dataset.ready='1';});
 // --- composite (2D) → print screen (WebGL)
 const comp=document.createElement('canvas'),cx=comp.getContext('2d');
 function composite(p,scale){
@@ -80,7 +86,7 @@ function composite(p,scale){
   cx.save();cx.translate(LID.x+LID.w/2+p.lidX,LID.y+LID.h/2+p.lidY);cx.rotate(p.lidR);
   cx.drawImage(master,LID.x,LID.y,LID.w,LID.h,-LID.w/2,-LID.h/2,LID.w,LID.h);cx.restore();
   // the monster, shown only above the near rim of the box
-  const s=SIZES[S.size],mw=monster.width*s,mh=monster.height*s;
+  const monster=mons[S.view],s=scaleOf(),mw=monster.width*s,mh=monster.height*s;
   cx.save();cx.beginPath();cx.moveTo(0,-HEAD);cx.lineTo(MW,-HEAD);for(const [x,y] of RIM)cx.lineTo(x,y);cx.closePath();cx.clip();
   cx.translate(MON.cx+p.dx,MON.base-p.rise*s+p.bob);cx.rotate(p.rot);cx.drawImage(monster,-mw/2,0,mw,mh);cx.restore();
 }
@@ -131,7 +137,7 @@ function frame(){
 }
 requestAnimationFrame(frame);
 const seg=(el,fn)=>el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));fn(b.dataset.v);});
-seg($('size'),v=>S.size=v);seg($('beats'),v=>{S.mode=v;S.t0=performance.now();});
+seg($('size'),v=>S.size=v);seg($('view'),v=>S.view=v);seg($('beats'),v=>{S.mode=v;S.t0=performance.now();});
 seg($('dots'),v=>{S.screen=v==='0'?0:1;if(v!=='0')S.dots=+v;});
 $('min').addEventListener('click',()=>{const m=$('panel').classList.toggle('min');$('min').textContent=m?'ขยาย':'ย่อ';$('min').setAttribute('aria-expanded',!m);});
 window.__stage={S,pose};
