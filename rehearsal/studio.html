@@ -45,6 +45,7 @@ canvas{cursor:default}canvas.over-box{cursor:pointer}
 if(/[?&]embed\b/.test(location.search))document.documentElement.classList.add('embed');
 const $=id=>document.getElementById(id);
 const ART='../art/incoming/aoh-2026-10-04/';
+const VQ=(v=>v?'?v='+v:'')(new URLSearchParams(location.search).get('v'));   // the publish stamp: art/clip files with the same name still reload after a publish (Aoh saw the old frames)
 const MW=1376,MH=768,HEAD=300,CW=MW,CH=MH+HEAD;
 // clips: keyed frames (every 2nd frame of 24 fps = 12 fps), crop box in master px, frames saved at 1.5 px per master px
 const CLIPS={
@@ -65,10 +66,10 @@ const CUP={x:837,y:378};
 const MON={cx:592,base:290,s:205/490,full:660,k:1057/(560*4/3),ox:764*4/3,oy:390*4/3,crop:[700,0,1160,1440],cutW:742};
 const MSEQ=[];for(let i=0;i<=24;i+=2)MSEQ.push(i);for(let i=26;i<=38;i+=2)MSEQ.push(i);for(let i=40;i<=50;i+=2)MSEQ.push(i);for(let i=88;i<=122;i+=2)MSEQ.push(i);
 const S={state:'load',t0:performance.now(),music:false,screen:1,dots:3,notice:false,nt0:0,monster:false,mt0:0};
-const load=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=ART+s;});
+const load=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=ART+s+VQ;});
 const F={};let sockets,master,box,puffs=[],ready=false;
 function frames(name){if(F[name])return F[name];const c=CLIPS[name],a=[];
-  for(let i=0;i<124;i+=2){const im=new Image();im.src=ART+c.dir+'f'+String(i).padStart(3,'0')+'.webp';a.push(im);}return F[name]=a;}
+  for(let i=0;i<124;i+=2){const im=new Image();im.src=ART+c.dir+'f'+String(i).padStart(3,'0')+'.webp'+VQ;a.push(im);}return F[name]=a;}
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 window.__intro={active:true};                                     // the shell (/rehearsal/) shows its doors when this turns false
 let progress=0,loadT0=performance.now(),base=false;
@@ -230,7 +231,7 @@ function drawPupils(now,p,ox,oy,only){
     if(sy>.5){cx.beginPath();cx.ellipse(-2,-PUP.ry*.45,2,3.4,-.3,0,Math.PI*2);cx.fillStyle='#fffaf0';cx.fill();}
     cx.restore();}
 }
-const FRONT={};function frontFrame(i){if(!FRONT[i]){const im=new Image();im.src=ART+'video/maker_notice_front/f'+String(2*i).padStart(3,'0')+'.webp';FRONT[i]=im;}return FRONT[i];}
+const FRONT={};function frontFrame(i){if(!FRONT[i]){const im=new Image();im.src=ART+'video/maker_notice_front/f'+String(2*i).padStart(3,'0')+'.webp'+VQ;FRONT[i]=im;}return FRONT[i];}
 let puffList=[],lastPuff=0;
 function steam(now,on){
   if(on&&now-lastPuff>650){lastPuff=now;puffList.push({t0:now,im:puffs[Math.floor(Math.random()*3)],sx:(Math.random()-.5)*8,ph:Math.random()*6,r:(Math.random()-.5)*.6});}
