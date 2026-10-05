@@ -1,14 +1,14 @@
 // By Thanest — journey rehearsal, ONE STAGE (DEC-020). Every set arrives into the stage from the object that was chosen;
 // the previous state leaves. The hash only records the state (Back, refresh and deep links stay real — Blueprint §2).
 // Set behaviour lives in ../rehearsal-lab/sets/*.js (tested modules). Stand-ins only — not art direction (rule 9).
-import * as khwanSet from '../rehearsal-lab/sets/khwan.js?v=202610051414';
-import * as coffeeSet from '../rehearsal-lab/sets/coffee.js?v=202610051414';
-import * as interactiveSet from '../rehearsal-lab/sets/interactive.js?v=202610051414';
-import * as filmSet from '../rehearsal-lab/sets/film.js?v=202610051414';
-import * as makingSet from '../rehearsal-lab/sets/making.js?v=202610051414';
-import * as pricingSet from '../rehearsal-lab/sets/pricing.js?v=202610051414';
-import * as contactSet from '../rehearsal-lab/sets/contact.js?v=202610051414';
-import * as editionsSet from '../rehearsal-lab/sets/editions.js?v=202610051414';
+import * as khwanSet from '../rehearsal-lab/sets/khwan.js?v=202610051439';
+import * as coffeeSet from '../rehearsal-lab/sets/coffee.js?v=202610051439';
+import * as interactiveSet from '../rehearsal-lab/sets/interactive.js?v=202610051439';
+import * as filmSet from '../rehearsal-lab/sets/film.js?v=202610051439';
+import * as makingSet from '../rehearsal-lab/sets/making.js?v=202610051439';
+import * as pricingSet from '../rehearsal-lab/sets/pricing.js?v=202610051439';
+import * as contactSet from '../rehearsal-lab/sets/contact.js?v=202610051439';
+import * as editionsSet from '../rehearsal-lab/sets/editions.js?v=202610051439';
 const $ = id => document.getElementById(id);
 
 // One visit's truth, owned by the journey (memory only; nothing personal is stored on the device unless the visitor chooses).
