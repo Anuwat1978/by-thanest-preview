@@ -85,7 +85,7 @@ const spring=(t,from=.12)=>t<0?from:1-(1-from)*Math.exp(-t*20)*Math.cos(t*22);
 const popXY=sy=>[1+(1-sy)*.45,sy];                       // squash-and-stretch: flat and wide, then tall and slim
 const NOTICE_FRONT=new Set([24,25,26,27,28,31,32,33,34,35,36,45,46,47,48]);   // keyed notice frames whose waving hand overlaps the box
 const TABLE_DODGE={from:29,hold:0.5,h:110};   // keyed frame where the table pops up (clip 007), seconds held up, px up
-const INTRO_START=0.98,INTRO_LEN=62/12,BAR={x:476,y:236,w:420,h:36},LOAD_MIN=1.8;
+const INTRO_START=0.84,INTRO_LEN=62/12,BAR={x:476,y:236,w:420,h:36},LOAD_MIN=1.8;
 function pose(now){
   const t=Math.max(0,(now-S.t0)/1000);let p={clip:'write',fi:0,bx:0,by:0,bs:1,lid:'closed',lx:0,ly:0,lr:0,steam:true,label:'เขียนงาน (คลิป 1)',mon:null};
   if(S.state==='load'){ // the ink loader fills with the real loading progress (at least LOAD_MIN s)
@@ -102,18 +102,18 @@ function pose(now){
       else{p.lid='closed';const q=clamp((t-0.7)/0.12,0,1);p.ly=-24*Math.sin(Math.PI*q);     // the knock
         if(t>=0.78){p.bs=1;[p.sx,p.sy]=popXY(spring(t-0.78,.03));}}                        // the box springs out of the lid
       return p;}
-    const ft=t-INTRO_START,T1=(TABLE_DODGE.from-2)/17.05,i=ft<T1?2+Math.floor(ft*17.05):TABLE_DODGE.from+Math.floor((ft-T1)*13.95);   // Aoh: the body 10% faster, from the table on 10% slower (15.5 → 17 / 14 fps)
+    const ft=t-INTRO_START,TB=28,FA=19,FB=11.9,T1=(TB-3)/FA,i=ft<T1?3+Math.floor(ft*FA):TB+Math.floor((ft-T1)*FB);   // Aoh: the body appears at once and fast (19 fps); from the first sight of the table top, 15% slower (11.9 fps)
     p.pivot='top';const pe=te=>Math.max(0,spring(ft-te,0));p.eyes=[pe(0.05),pe(0.13)];                // the eye sockets pop out of the box
     if(i<62){p.clip='intro';p.fi=i;p.label='ฉากประกอบตัวเอง (คลิป 4)';
       const tr=TRACK.intro_assemble;
-      const LAND=5,tl=ft-(LAND-2)/17.05;                                        // Aoh: the head drops straight onto the body as it springs up
+      const LAND=5,tl=ft-(LAND-3)/FA;                                        // Aoh: the head drops straight onto the body as it springs up
       if(i<3){p.by=-230+Math.sin(ft*20)*3;}
-      else if(i<LAND){const q=clamp(((ft*17.05)-1)/(LAND-3),0,1);p.by=-230+(tr[LAND][1]+230)*q*q;p.bx=tr[LAND][0]*q;}
+      else if(i<LAND){const q=clamp((ft*FA)/(LAND-3),0,1);p.by=-230+(tr[LAND][1]+230)*q*q;p.bx=tr[LAND][0]*q;}
       else{p.bx=tr[i][0];p.by=tr[i][1];
         if(tl>0&&tl<.7){p.by-=20*Math.exp(-7*tl)*Math.abs(Math.sin(17*tl));       // the head recoils up a little and settles
           p.ly=-(16*Math.exp(-6*Math.max(0,tl-.04))*Math.abs(Math.sin(15*Math.max(0,tl-.04))));}   // the lid bounces a bit higher, a beat later
         // Aoh's gag: the table comes in late from above, so the finished head (box + lid) ducks UP out of its way, then drops back
-        const D=TABLE_DODGE,f=ft-T1;
+        const D=TABLE_DODGE,f=ft-T1-(D.from-TB)/FB;
         if(f>0&&f<D.hold+.12){const up=f<.12?ease(f/.12):f<D.hold?1:1-(f-D.hold)/.12*(f-D.hold)/.12;   // whoosh up, hold while the table passes, drop
           p.by-=D.h*up;p.sy=1+.1*up*(f<.12?1:.4);p.sx=1-.06*up;p.br=-.07*up*Math.sin(f*9);}
         else if(f>=D.hold+.12&&f<D.hold+.6)[p.sx,p.sy]=popXY(spring(f-D.hold-.12,.84));}         // lands back on the collar with a squash  // rides the collar
